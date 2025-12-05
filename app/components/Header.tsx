@@ -19,6 +19,11 @@ interface HeaderProps {
   years: number[]
   onAddMovie?: () => void
   hideAuth?: boolean // Hide login/signup buttons (for dashboard)
+  selectedUserId?: string
+  onUserIdChange?: (userId: string) => void
+  users?: Array<{ id: string; name: string }>
+  selectedRating?: string
+  onRatingChange?: (rating: string) => void
 }
 
 export default function Header({
@@ -34,6 +39,11 @@ export default function Header({
   years,
   onAddMovie,
   hideAuth = false,
+  selectedUserId,
+  onUserIdChange,
+  users = [],
+  selectedRating,
+  onRatingChange,
 }: HeaderProps) {
   const router = useRouter()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -112,6 +122,34 @@ export default function Header({
                 <option key={year} value={year.toString()}>{year}</option>
               ))}
             </select>
+
+            {/* Filter by User */}
+            {onUserIdChange && users.length > 0 && (
+              <select
+                value={selectedUserId || ''}
+                onChange={(e) => onUserIdChange(e.target.value)}
+                className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E50914] text-sm"
+              >
+                <option value="">All Users</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Filter by High Rating */}
+            {onRatingChange && (
+              <select
+                value={selectedRating || ''}
+                onChange={(e) => onRatingChange(e.target.value)}
+                className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E50914] text-sm"
+              >
+                <option value="">All Ratings</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                <option value="4">⭐⭐⭐⭐ 4+ Stars</option>
+                <option value="3">⭐⭐⭐ 3+ Stars</option>
+              </select>
+            )}
           </div>
 
           {/* Right: Auth */}
@@ -269,6 +307,34 @@ export default function Header({
                 <option key={year} value={year.toString()}>{year}</option>
               ))}
             </select>
+
+            {/* Filter by User (Mobile) */}
+            {onUserIdChange && users.length > 0 && (
+              <select
+                value={selectedUserId || ''}
+                onChange={(e) => onUserIdChange(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E50914] text-sm"
+              >
+                <option value="">All Users</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Filter by High Rating (Mobile) */}
+            {onRatingChange && (
+              <select
+                value={selectedRating || ''}
+                onChange={(e) => onRatingChange(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E50914] text-sm"
+              >
+                <option value="">All Ratings</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                <option value="4">⭐⭐⭐⭐ 4+ Stars</option>
+                <option value="3">⭐⭐⭐ 3+ Stars</option>
+              </select>
+            )}
           </div>
         )}
       </div>

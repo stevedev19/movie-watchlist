@@ -12,7 +12,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, refreshUser, user } = useAuth();
+  const { login, refreshUser } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,19 +29,31 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
       if (!result.success) {
         setError(result.error || "Login failed.");
-      } else {
-        await refreshUser();
-        // Wait a bit for state to update, then call onSuccess
-        setTimeout(() => {
-          if (user) {
-            onSuccess?.({ id: user.id, name: user.name });
-          }
-        }, 100);
+        setLoading(false);
+        return;
       }
+
+      // Refresh user state after successful login
+      await refreshUser();
+      
+      // Get user from a fresh fetch to ensure we have the latest data
+      try {
+        const meRes = await fetch('/api/me', {
+          credentials: 'include',
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.user) {
+            onSuccess?.({ id: meData.user.id, name: meData.user.name });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user after login:', err);
+      }
+      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Something went wrong.");
-    } finally {
       setLoading(false);
     }
   }
