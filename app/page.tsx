@@ -93,14 +93,6 @@ export default function Home() {
                     >
                       My Watched Movies
                     </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => router.push('/admin')}
-                      className="px-3 py-2 bg-[#8B5CF6] border border-[#8B5CF6] rounded-lg text-white text-sm font-medium hover:bg-[#7C3AED] transition-colors"
-                    >
-                      👑 Admin
-                    </button>
-                  )}
                   <span className="text-sm text-[#A3A3A3] hidden lg:block">
                     Welcome, {isAdmin && <span className="text-yellow-400">👑</span>} {user?.name}
                   </span>
@@ -150,8 +142,8 @@ export default function Home() {
       </header>
 
       {/* Hero Section with Lamp Effect */}
-      <div className="relative -mt-20">
-        <LampContainer className="min-h-[80vh]">
+      <div className="relative z-10 pt-8 pb-12">
+        <LampContainer className="min-h-[70vh] flex items-center justify-center">
           <motion.div
             initial={{ opacity: 0.5, y: 100 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -160,7 +152,7 @@ export default function Home() {
               duration: 0.8,
               ease: "easeInOut",
             }}
-            className="text-center"
+            className="text-center w-full"
           >
             <h2 className="mt-8 bg-gradient-to-br from-slate-300 to-slate-500 py-4 bg-clip-text text-center text-4xl font-medium tracking-tight text-transparent md:text-7xl mb-6">
               Track Your
@@ -200,7 +192,7 @@ export default function Home() {
                   <span>Watched Movies</span>
                 </button>
                 <button
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push('/all-movies')}
                   className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
                 >
                   View All Movies

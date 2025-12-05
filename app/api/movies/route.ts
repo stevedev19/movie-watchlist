@@ -6,6 +6,7 @@ import { Movie as MovieType } from '@/types/movie'
 import { getUserFromRequestCookie } from '@/lib/auth'
 import { User } from '@/models/User'
 import mongoose from 'mongoose'
+import { logActivity } from '@/app/lib/activity-logger'
 
 // GET /api/movies - Get all movies for a user (from both collections)
 export async function GET(request: NextRequest) {
@@ -137,9 +138,16 @@ export async function POST(request: NextRequest) {
     
     await connectDB()
     
-    // Allow guest mode when no auth cookie is present
-    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
+    // Authentication required for POST
+    const user = getUserFromRequestCookie()
+    if (!user || !user.userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
     const userId = user.userId
+    const userName = user.name || 'Unknown'
 
     const body = await request.json()
     const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating } = body
@@ -183,6 +191,16 @@ export async function POST(request: NextRequest) {
       })
 
       await movie.save()
+
+      // Log activity
+      await logActivity({
+        userId,
+        userName,
+        action: 'add',
+        movieId: movie._id.toString(),
+        movieTitle: movie.title,
+        details: 'Added as watched movie',
+      })
 
       console.log('🟢 [API POST] Watched movie saved to DB:', {
         id: movie._id.toString(),
@@ -240,6 +258,16 @@ export async function POST(request: NextRequest) {
       })
 
       await movie.save()
+
+      // Log activity
+      await logActivity({
+        userId,
+        userName,
+        action: 'add',
+        movieId: movie._id.toString(),
+        movieTitle: movie.title,
+        details: 'Added to watchlist',
+      })
 
       // 🔥 CRITICAL: Verify what was actually saved
       console.log('[API /movies POST] Movie saved to DB:', {

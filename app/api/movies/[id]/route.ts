@@ -6,6 +6,7 @@ import MovieDeleted from '@/app/models/MovieDeleted'
 import { Movie as MovieType } from '@/types/movie'
 import mongoose from 'mongoose'
 import { getUserFromRequestCookie } from '@/lib/auth'
+import { logActivity } from '@/app/lib/activity-logger'
 
 const normalizeImageUrl = (value: unknown): string | null => {
   if (!value || typeof value !== 'string') return null
@@ -175,6 +176,16 @@ export async function PUT(
         await newMovie.save()
         await MovieToWatch.findByIdAndDelete(params.id)
 
+        // Log activity - marked as watched
+        await logActivity({
+          userId,
+          userName,
+          action: 'watch',
+          movieId: newMovie._id.toString(),
+          movieTitle: newMovie.title,
+          details: 'Marked movie as watched',
+        })
+
         const movieResult: MovieType = {
           id: newMovie._id.toString(),
           title: newMovie.title,
@@ -218,6 +229,16 @@ export async function PUT(
         const newMovie = new MovieToWatch(movieData)
         await newMovie.save()
         await MovieWatched.findByIdAndDelete(params.id)
+
+        // Log activity - marked as unwatched
+        await logActivity({
+          userId,
+          userName,
+          action: 'unwatch',
+          movieId: newMovie._id.toString(),
+          movieTitle: newMovie.title,
+          details: 'Marked movie as unwatched',
+        })
 
         const movieResult: MovieType = {
           id: newMovie._id.toString(),
@@ -284,6 +305,21 @@ export async function PUT(
       )
     }
 
+    // Log activity - update movie
+    const actionType = rating !== undefined ? 'rate' : 'update'
+    const details = rating !== undefined 
+      ? `Rated movie ${rating}/5` 
+      : 'Updated movie details'
+    
+    await logActivity({
+      userId,
+      userName,
+      action: actionType,
+      movieId: updatedMovie._id.toString(),
+      movieTitle: updatedMovie.title,
+      details,
+    })
+
     const normalizedImageUrl = normalizeImageUrl(updatedMovie.imageUrl) || normalizeImageUrl(updatedMovie.image)
     const normalizedImage = normalizeImageUrl(updatedMovie.image)
     const finalHasImage = normalizedImageUrl ? true : updatedMovie.hasImage !== undefined ? !!updatedMovie.hasImage : false
@@ -340,6 +376,7 @@ export async function DELETE(
     }
 
     const userId = user.userId
+    const userName = user.name || 'Unknown'
 
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json(
@@ -387,6 +424,16 @@ export async function DELETE(
     })
 
     await deletedMovie.save()
+
+    // Log activity - delete movie
+    await logActivity({
+      userId,
+      userName,
+      action: 'delete',
+      movieId: params.id,
+      movieTitle: movie.title,
+      details: 'Deleted movie',
+    })
 
     // Remove from original collection
     if (sourceCollection === 'to-watch') {
