@@ -33,12 +33,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = signToken({ userId: user._id.toString(), name: user.name });
+    const token = signToken({ 
+      userId: user._id.toString(), 
+      name: user.name,
+      role: (user as any).role || 'user'
+    });
 
     const res = NextResponse.json(
       {
         message: "Login successful",
-        user: { id: user._id, name: user.name },
+        user: { 
+          id: user._id, 
+          name: user.name,
+          role: (user as any).role || 'user'
+        },
       },
       { status: 200 }
     );

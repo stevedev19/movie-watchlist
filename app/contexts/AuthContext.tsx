@@ -8,6 +8,7 @@ interface AuthContextType extends AuthState {
   signup: (name: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  isAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -102,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const isAdminUser = user?.role === 'admin'
+
   return (
     <AuthContext.Provider
       value={{
@@ -112,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         refreshUser,
+        isAdmin: isAdminUser,
       }}
     >
       {children}

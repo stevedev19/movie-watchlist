@@ -49,7 +49,7 @@ export default function Header({
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, isAdmin } = useAuth()
 
   const handleAddMovieClick = () => {
     if (!isAuthenticated) {
@@ -165,11 +165,20 @@ export default function Header({
                       ➕ Add Movie
                     </button>
                   )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => router.push('/admin')}
+                      className="px-4 py-2 bg-[#8B5CF6] text-white rounded-lg text-sm font-semibold hover:bg-[#7C3AED] transition-all hidden md:block"
+                    >
+                      👑 Admin
+                    </button>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-[#A3A3A3] hidden lg:block">Welcome,</span>
                     <span className="text-sm font-semibold text-white flex items-center gap-1">
-                      <span>👤</span>
+                      {isAdmin && <span className="text-yellow-400">👑</span>}
                       <span>{user?.name || 'User'}</span>
+                      {isAdmin && <span className="text-xs text-yellow-400">(Admin)</span>}
                     </span>
                   </div>
                   <button
@@ -234,17 +243,27 @@ export default function Header({
             </div>
             {!hideAuth && (
               <>
-                {isAuthenticated ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white font-semibold hidden sm:block">👤 {user?.name}</span>
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white font-semibold hidden sm:block">
+                    {isAdmin && <span className="text-yellow-400">👑</span>} {user?.name}
+                  </span>
+                  {isAdmin && (
                     <button
-                      onClick={() => logout()}
-                      className="px-3 py-1.5 bg-[#181818] border border-[#262626] rounded text-white text-xs font-medium hover:border-[#E50914] transition-colors"
+                      onClick={() => router.push('/admin')}
+                      className="px-2 py-1.5 bg-[#8B5CF6] text-white rounded text-xs font-semibold hover:bg-[#7C3AED] transition-all"
                     >
-                      Logout
+                      Admin
                     </button>
-                  </div>
-                ) : (
+                  )}
+                  <button
+                    onClick={() => logout()}
+                    className="px-3 py-1.5 bg-[#181818] border border-[#262626] rounded text-white text-xs font-medium hover:border-[#E50914] transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowLoginModal(true)}

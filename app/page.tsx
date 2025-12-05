@@ -92,7 +92,17 @@ export default function Home() {
                   >
                     Watched Movies
                   </button>
-                  <span className="text-sm text-[#A3A3A3] hidden lg:block">Welcome, {user?.name}</span>
+                  {user?.role === 'admin' && (
+                    <button
+                      onClick={() => router.push('/admin')}
+                      className="px-3 py-2 bg-[#8B5CF6] border border-[#8B5CF6] rounded-lg text-white text-sm font-medium hover:bg-[#7C3AED] transition-colors"
+                    >
+                      👑 Admin
+                    </button>
+                  )}
+                  <span className="text-sm text-[#A3A3A3] hidden lg:block">
+                    Welcome, {user?.role === 'admin' && <span className="text-yellow-400">👑</span>} {user?.name}
+                  </span>
                 </div>
                 <button
                   onClick={() => router.push('/dashboard')}
@@ -100,6 +110,14 @@ export default function Home() {
                 >
                   Dashboard
                 </button>
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => router.push('/admin')}
+                    className="px-4 py-2 bg-[#8B5CF6] text-white rounded-lg font-semibold hover:bg-[#7C3AED] transition-all"
+                  >
+                    👑 Admin
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     await logout()
