@@ -3,10 +3,16 @@ import { getUserFromRequestCookie } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    // Use the same authentication pattern as other routes (like /api/movies)
-    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
+    const user = getUserFromRequestCookie()
 
-    // Return user data (guest if no auth cookie)
+    if (!user || !user.userId) {
+      return NextResponse.json(
+        { error: 'Authentication required', user: null },
+        { status: 401 }
+      );
+    }
+
+    // Return authenticated user data
     return NextResponse.json({ 
       user: {
         id: user.userId,

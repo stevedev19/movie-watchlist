@@ -67,10 +67,13 @@ const SAMPLE_TRENDING_MOVIES: Movie[] = [
 function DashboardContent() {
   const searchParams = useSearchParams()
   const [movies, setMovies] = useState<Movie[]>([])
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'unwatched' | 'watched'>('all')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedRating, setSelectedRating] = useState('')
   const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -83,7 +86,8 @@ function DashboardContent() {
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const currentUserId = user?.id || user?.userId || undefined
 
   // Handle URL query parameters for filtering
   useEffect(() => {
@@ -94,6 +98,22 @@ function DashboardContent() {
       setFilterType('unwatched')
     }
   }, [searchParams])
+
+  // Load users on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users')
+        if (response.ok) {
+          const data = await response.json()
+          setUsers(data.users || [])
+        }
+      } catch (error) {
+        console.error('Error loading users:', error)
+      }
+    }
+    fetchUsers()
+  }, [])
 
   // Load movies on mount
   useEffect(() => {
@@ -116,12 +136,9 @@ function DashboardContent() {
       }
     }
 
-    if (isAuthenticated) {
-      fetchMovies()
-    } else {
-      setIsLoading(false)
-    }
-  }, [isAuthenticated])
+    // Always fetch movies (public viewing)
+    fetchMovies()
+  }, [])
 
   // Get unique genres and years
   const genres = useMemo(() => {
@@ -158,7 +175,14 @@ function DashboardContent() {
       // Year filter
       const matchesYear = !selectedYear || movie.year?.toString() === selectedYear
       
-      return matchesSearch && matchesType && matchesGenre && matchesYear
+      // User filter
+      const matchesUser = !selectedUserId || movie.userId === selectedUserId
+      
+      // Rating filter (only for watched movies)
+      const matchesRating = !selectedRating || 
+        (movie.watched && movie.rating && movie.rating >= parseInt(selectedRating, 10))
+      
+      return matchesSearch && matchesType && matchesGenre && matchesYear && matchesUser && matchesRating
     })
 
     // Sort
@@ -175,7 +199,7 @@ function DashboardContent() {
     })
 
     return filtered
-  }, [movies, searchQuery, filterType, selectedGenre, selectedYear, sortBy])
+  }, [movies, searchQuery, filterType, selectedGenre, selectedYear, selectedUserId, selectedRating, sortBy])
 
   const toWatchMovies = filteredAndSortedMovies.filter(m => !m.watched)
   const watchedMovies = filteredAndSortedMovies.filter(m => m.watched)
@@ -372,6 +396,11 @@ function DashboardContent() {
         years={years}
         onAddMovie={() => setShowAddMovieModal(true)}
         hideAuth={true}
+        selectedUserId={selectedUserId}
+        onUserIdChange={setSelectedUserId}
+        users={users}
+        selectedRating={selectedRating}
+        onRatingChange={setSelectedRating}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -412,58 +441,46 @@ function DashboardContent() {
         {/* Your Watchlist */}
         {toWatchMovies.length > 0 && (
           <SectionRow title="Your Watchlist" horizontal>
-            {toWatchMovies.map(movie => (
-              <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                <MovieCard
-                  movie={movie}
-                  onToggleWatched={() => handleToggleWatched(movie.id)}
-                  onDelete={() => handleDelete(movie.id)}
-                  onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                  onEditNotes={() => handleEditNotes(movie)}
-                />
-              </div>
-            ))}
+            {toWatchMovies.map(movie => {
+              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              return (
+                <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
+                  <MovieCard
+                    movie={movie}
+                    onToggleWatched={() => handleToggleWatched(movie.id)}
+                    onDelete={() => handleDelete(movie.id)}
+                    onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
+                    onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
+                    currentUserId={currentUserId}
+                    isOwner={isOwner}
+                  />
+                </div>
+              )
+            })}
           </SectionRow>
         )}
 
         {/* Watched Movies */}
         {watchedMovies.length > 0 && (
           <SectionRow title="Watched Movies" horizontal>
-            {watchedMovies.map(movie => (
-              <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                <MovieCard
-                  movie={movie}
-                  onToggleWatched={() => handleToggleWatched(movie.id)}
-                  onDelete={() => handleDelete(movie.id)}
-                  onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                  onEditNotes={() => handleEditNotes(movie)}
-                />
-              </div>
-            ))}
+            {watchedMovies.map(movie => {
+              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              return (
+                <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
+                  <MovieCard
+                    movie={movie}
+                    onToggleWatched={() => handleToggleWatched(movie.id)}
+                    onDelete={() => handleDelete(movie.id)}
+                    onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
+                    onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
+                    currentUserId={currentUserId}
+                    isOwner={isOwner}
+                  />
+                </div>
+              )
+            })}
           </SectionRow>
         )}
-
-        {/* Trending Now */}
-        <SectionRow title="Trending Now" horizontal>
-          {SAMPLE_TRENDING_MOVIES.map(movie => {
-            const isInWatchlist = movies.some(m => m.title === movie.title)
-            return (
-              <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                <MovieCard
-                  movie={movie}
-                  onToggleWatched={() => {
-                    if (!isInWatchlist) {
-                      handleAddToWatchlist(movie)
-                    }
-                  }}
-                  onDelete={() => {}}
-                  onUpdateRating={() => {}}
-                  onEditNotes={() => handleEditNotes(movie)}
-                />
-              </div>
-            )
-          })}
-        </SectionRow>
 
         {/* Full Dashboard Grid with Filters */}
         {filteredAndSortedMovies.length > 0 && (
@@ -479,18 +496,23 @@ function DashboardContent() {
               onYearChange={setSelectedYear}
             />
 
-            <SectionRow title="All Movies">
-              {filteredAndSortedMovies.map(movie => (
-                <MovieCard
-                  key={movie.id}
-                  movie={movie}
-                  onToggleWatched={() => handleToggleWatched(movie.id)}
-                  onDelete={() => handleDelete(movie.id)}
-                  onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                  onEditNotes={() => handleEditNotes(movie)}
-                />
-              ))}
-            </SectionRow>
+              <SectionRow title="All Movies">
+                {filteredAndSortedMovies.map(movie => {
+                  const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+                  return (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      onToggleWatched={() => handleToggleWatched(movie.id)}
+                      onDelete={() => handleDelete(movie.id)}
+                      onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
+                      onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
+                      currentUserId={currentUserId}
+                      isOwner={isOwner}
+                    />
+                  )
+                })}
+              </SectionRow>
           </>
         )}
 

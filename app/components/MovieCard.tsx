@@ -9,6 +9,8 @@ interface MovieCardProps {
   onDelete: () => void
   onUpdateRating: (rating: number | undefined) => void
   onEditNotes?: () => void
+  currentUserId?: string // ID of the current authenticated user
+  isOwner?: boolean // Whether the current user is the owner of this movie
 }
 
 export default function MovieCard({ 
@@ -16,7 +18,9 @@ export default function MovieCard({
   onToggleWatched, 
   onDelete, 
   onUpdateRating,
-  onEditNotes 
+  onEditNotes,
+  currentUserId,
+  isOwner = false
 }: MovieCardProps) {
   const [showActions, setShowActions] = useState(false)
   
@@ -93,33 +97,35 @@ export default function MovieCard({
           showActions ? 'opacity-60' : 'opacity-0'
         }`} />
         
-        {/* Action buttons - slide up on hover */}
-        <div className={`absolute bottom-0 left-0 right-0 p-3 transition-transform duration-300 ${
-          showActions ? 'translate-y-0' : 'translate-y-full'
-        }`}>
-          <div className="flex gap-2">
-            <button
-              onClick={onToggleWatched}
-              className="flex-1 px-3 py-2 bg-white text-black rounded text-sm font-semibold hover:bg-opacity-90 transition-all"
-            >
-              {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
-            </button>
-            {onEditNotes && (
+        {/* Action buttons - slide up on hover (only show if user is owner) */}
+        {isOwner && (
+          <div className={`absolute bottom-0 left-0 right-0 p-3 transition-transform duration-300 ${
+            showActions ? 'translate-y-0' : 'translate-y-full'
+          }`}>
+            <div className="flex gap-2">
               <button
-                onClick={onEditNotes}
-                className="px-3 py-2 bg-[#181818] text-white rounded text-sm font-semibold hover:bg-[#262626] transition-all border border-[#262626]"
+                onClick={onToggleWatched}
+                className="flex-1 px-3 py-2 bg-white text-black rounded text-sm font-semibold hover:bg-opacity-90 transition-all"
               >
-                ✏️
+                {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
               </button>
-            )}
-            <button
-              onClick={onDelete}
-              className="px-3 py-2 netflix-red text-white rounded text-sm font-semibold netflix-red-hover transition-all"
-            >
-              🗑️
-            </button>
+              {onEditNotes && (
+                <button
+                  onClick={onEditNotes}
+                  className="px-3 py-2 bg-[#181818] text-white rounded text-sm font-semibold hover:bg-[#262626] transition-all border border-[#262626]"
+                >
+                  ✏️
+                </button>
+              )}
+              <button
+                onClick={onDelete}
+                className="px-3 py-2 netflix-red text-white rounded text-sm font-semibold netflix-red-hover transition-all"
+              >
+                🗑️
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Watched badge */}
         {movie.watched && (
@@ -143,6 +149,21 @@ export default function MovieCard({
           )}
         </div>
 
+        {/* User who registered the movie */}
+        {movie.userName && (
+          <div className="flex items-center gap-1 text-xs text-[#A3A3A3] mb-2">
+            <span>👤</span>
+            <span>Added by {movie.userName}</span>
+          </div>
+        )}
+
+        {/* Added date */}
+        {movie.createdAt && (
+          <div className="text-xs text-[#A3A3A3] mb-2">
+            📅 Added on {formatDate(movie.createdAt)}
+          </div>
+        )}
+
         {movie.notes && (
           <p className="text-xs text-[#A3A3A3] line-clamp-2 mb-2">
             {movie.notes}
@@ -155,7 +176,7 @@ export default function MovieCard({
           </div>
         )}
 
-        {movie.watched && (
+        {movie.watched && isOwner && (
           <div className="mb-2">
             {renderStars(movie.rating)}
             {!movie.rating && (
@@ -176,29 +197,31 @@ export default function MovieCard({
           </div>
         )}
 
-        {/* Mobile actions (always visible on mobile) */}
-        <div className="md:hidden flex gap-2 mt-3">
-          <button
-            onClick={onToggleWatched}
-            className="flex-1 px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
-          >
-            {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
-          </button>
-          {onEditNotes && (
+        {/* Mobile actions (always visible on mobile, only if user is owner) */}
+        {isOwner && (
+          <div className="md:hidden flex gap-2 mt-3">
             <button
-              onClick={onEditNotes}
-              className="px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
+              onClick={onToggleWatched}
+              className="flex-1 px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
             >
-              ✏️
+              {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
             </button>
-          )}
-          <button
-            onClick={onDelete}
-            className="px-2 py-1.5 netflix-red text-white rounded text-xs font-semibold netflix-red-hover transition-all"
-          >
-            🗑️
-          </button>
-        </div>
+            {onEditNotes && (
+              <button
+                onClick={onEditNotes}
+                className="px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
+              >
+                ✏️
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              className="px-2 py-1.5 netflix-red text-white rounded text-xs font-semibold netflix-red-hover transition-all"
+            >
+              🗑️
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

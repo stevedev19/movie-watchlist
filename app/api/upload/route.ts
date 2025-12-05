@@ -4,11 +4,8 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { getUserFromRequestCookie } from '@/lib/auth'
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
+// Note: In Next.js App Router, body parsing is handled automatically
+// No need for deprecated config export
 
 export async function POST(request: NextRequest) {
   try {

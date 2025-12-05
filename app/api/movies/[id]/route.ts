@@ -104,8 +104,14 @@ export async function PUT(
     
     await connectDB()
     
-    // Allow guest mode when no auth cookie is present
-    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
+    // Authentication required for PUT
+    const user = getUserFromRequestCookie()
+    if (!user || !user.userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
     const userId = user.userId
 
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
@@ -118,14 +124,23 @@ export async function PUT(
     const body = await request.json()
     const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating, watchedAt } = body
 
-    // Find which collection the movie is in
-    let movieInToWatch = await MovieToWatch.findOne({ _id: params.id, userId })
-    let movieInWatched = await MovieWatched.findOne({ _id: params.id, userId })
+    // Find which collection the movie is in (check ownership)
+    let movieInToWatch = await MovieToWatch.findById(params.id)
+    let movieInWatched = await MovieWatched.findById(params.id)
 
     if (!movieInToWatch && !movieInWatched) {
       return NextResponse.json(
         { error: 'Movie not found' },
         { status: 404 }
+      )
+    }
+
+    // Check ownership - user can only edit their own movies
+    const existingMovie = movieInToWatch || movieInWatched
+    if (existingMovie.userId && existingMovie.userId.toString() !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: You can only edit your own movies' },
+        { status: 403 }
       )
     }
 
@@ -249,14 +264,14 @@ export async function PUT(
 
     let updatedMovie
     if (movieInToWatch) {
-      updatedMovie = await MovieToWatch.findOneAndUpdate(
-        { _id: params.id, userId },
+      updatedMovie = await MovieToWatch.findByIdAndUpdate(
+        params.id,
         updateData,
         { new: true, runValidators: true }
       )
     } else if (movieInWatched) {
-      updatedMovie = await MovieWatched.findOneAndUpdate(
-        { _id: params.id, userId },
+      updatedMovie = await MovieWatched.findByIdAndUpdate(
+        params.id,
         updateData,
         { new: true, runValidators: true }
       )
@@ -333,12 +348,12 @@ export async function DELETE(
       )
     }
 
-    // Find which collection the movie is in
-    let movie = await MovieToWatch.findOne({ _id: params.id, userId })
+    // Find which collection the movie is in (check ownership)
+    let movie = await MovieToWatch.findById(params.id)
     let sourceCollection = 'to-watch'
 
     if (!movie) {
-      movie = await MovieWatched.findOne({ _id: params.id, userId })
+      movie = await MovieWatched.findById(params.id)
       sourceCollection = 'watched'
     }
 
@@ -346,6 +361,14 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Movie not found' },
         { status: 404 }
+      )
+    }
+
+    // Check ownership - user can only delete their own movies
+    if (movie.userId && movie.userId.toString() !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: You can only delete your own movies' },
+        { status: 403 }
       )
     }
 

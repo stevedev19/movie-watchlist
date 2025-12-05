@@ -12,5 +12,7 @@ export type Movie = {
   watched: boolean;
   createdAt: string;   // ISO date string
   watchedAt?: string;  // when marked as watched
+  userId?: string;     // ID of the user who registered the movie
+  userName?: string;   // Name of the user who registered the movie
 };
 

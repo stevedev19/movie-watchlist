@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Ensure cookies are sent and received
         body: JSON.stringify({ name, password }),
       })
 
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Ensure cookies are sent and received
         body: JSON.stringify({ name, password }),
       })
 
@@ -86,9 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await fetch('/api/logout', { method: 'POST' })
       setUser(null)
+      // Force a page reload to clear any cached state
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     } catch (error) {
       console.error('Logout error:', error)
       setUser(null)
+      // Still reload even if API call fails
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     }
   }
 

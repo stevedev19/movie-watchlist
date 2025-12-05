@@ -5,9 +5,13 @@ import { useAuth } from './contexts/AuthContext'
 import LoginModal from './components/LoginModal'
 import SignupModal from './components/SignupModal'
 import AddMovieModal from './components/AddMovieModal'
-import { useState } from 'react'
+import MovieCard from './components/MovieCard'
+import SectionRow from './components/SectionRow'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { LampContainer } from '@/components/ui/lamp'
+import { Movie } from '@/types/movie'
+import { loadMovies } from '@/app/lib/storage-mongodb'
 
 export default function Home() {
   const router = useRouter()
@@ -15,6 +19,32 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [isLoadingMovies, setIsLoadingMovies] = useState(true)
+
+  // Load movies on mount
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setIsLoadingMovies(true)
+      try {
+        const loaded = await loadMovies()
+        setMovies(loaded)
+      } catch (error) {
+        console.error('Error loading movies:', error)
+      } finally {
+        setIsLoadingMovies(false)
+      }
+    }
+    fetchMovies()
+  }, [])
+
+  // Get highly rated movies (watched movies with rating >= 4)
+  const recommendedMovies = useMemo(() => {
+    return movies
+      .filter(movie => movie.watched && movie.rating && movie.rating >= 4)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 10) // Top 10 highly rated movies
+  }, [movies])
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -184,6 +214,52 @@ export default function Home() {
               </>
             )}
           </div>
+
+          {/* Recommended Movies Section */}
+          {!isLoadingMovies && recommendedMovies.length > 0 && (
+            <div className="mt-20 mb-20 w-full">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 text-center">
+                ⭐ Recommended Movies
+              </h2>
+              <p className="text-[#A3A3A3] text-center mb-8 max-w-2xl mx-auto">
+                Discover the highest-rated movies from our community. These are the top picks that users have watched and loved.
+              </p>
+              <SectionRow title="" horizontal>
+                {recommendedMovies.map(movie => (
+                  <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
+                    <MovieCard
+                      movie={movie}
+                      onToggleWatched={() => {
+                        // Navigate to dashboard if user wants to toggle
+                        router.push('/dashboard')
+                      }}
+                      onDelete={() => {
+                        // Navigate to dashboard if user wants to delete
+                        router.push('/dashboard')
+                      }}
+                      onUpdateRating={(rating) => {
+                        // Navigate to dashboard if user wants to rate
+                        router.push('/dashboard')
+                      }}
+                      currentUserId={user?.id || user?.userId || undefined}
+                      isOwner={user && movie.userId && (user.id || user.userId) === movie.userId}
+                    />
+                  </div>
+                ))}
+              </SectionRow>
+            </div>
+          )}
+
+          {!isLoadingMovies && recommendedMovies.length === 0 && (
+            <div className="mt-20 mb-20 text-center">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                ⭐ Recommended Movies
+              </h2>
+              <p className="text-[#A3A3A3]">
+                No highly rated movies yet. Be the first to rate a movie 4+ stars!
+              </p>
+            </div>
+          )}
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20">

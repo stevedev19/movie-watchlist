@@ -4,6 +4,8 @@ import MovieToWatch from '@/app/models/MovieToWatch'
 import MovieWatched from '@/app/models/MovieWatched'
 import { Movie as MovieType } from '@/types/movie'
 import { getUserFromRequestCookie } from '@/lib/auth'
+import { User } from '@/models/User'
+import mongoose from 'mongoose'
 
 // GET /api/movies - Get all movies for a user (from both collections)
 export async function GET(request: NextRequest) {
@@ -18,8 +20,9 @@ export async function GET(request: NextRequest) {
     await connectDB()
     
     // Allow guest mode when no auth cookie is present
+    // For public viewing, we don't filter by userId here, but we still need it for POST/PUT/DELETE
     const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
-    const userId = user.userId
+    // const userId = user.userId // Removed filtering by userId for GET
 
     // Normalize legacy/invalid image values before sending to the client
     const normalizeImageUrl = (value: unknown): string | null => {
@@ -51,18 +54,44 @@ export async function GET(request: NextRequest) {
         watched,
         createdAt: m.createdAt,
         watchedAt: m.watchedAt,
+        userId: m.userId?.toString(), // Include userId in the response
       }
     }
 
-    // Get movies from both collections
+    // Get movies from both collections (fetch all, not filtered by userId)
     const [toWatchMovies, watchedMovies] = await Promise.all([
-      MovieToWatch.find({ userId }).sort({ createdAt: -1 }),
-      MovieWatched.find({ userId }).sort({ createdAt: -1 }),
+      MovieToWatch.find({}).sort({ createdAt: -1 }), // Fetch all
+      MovieWatched.find({}).sort({ createdAt: -1 }), // Fetch all
     ])
     
+    // Get all unique user IDs from movies
+    const userIds = new Set<string>()
+    toWatchMovies.forEach(m => m.userId && userIds.add(m.userId.toString()))
+    watchedMovies.forEach(m => m.userId && userIds.add(m.userId.toString()))
+    
+    // Fetch user names for all user IDs (using the same connection)
+    // Convert string IDs to ObjectIds for MongoDB query
+    const userIdsArray = Array.from(userIds).filter(id => mongoose.Types.ObjectId.isValid(id))
+    const userObjectIds = userIdsArray.map(id => new mongoose.Types.ObjectId(id))
+    const users = userIdsArray.length > 0 
+      ? await User.find({ _id: { $in: userObjectIds } }).select('_id name')
+      : []
+    const userMap = new Map<string, string>()
+    users.forEach(user => {
+      userMap.set(user._id.toString(), user.name || 'Unknown')
+    })
+    
     const allMovies: MovieType[] = [
-      ...toWatchMovies.map((movie) => formatMovie(movie, false)),
-      ...watchedMovies.map((movie) => formatMovie(movie, true)),
+      ...toWatchMovies.map((movie) => {
+        const formatted = formatMovie(movie, false)
+        formatted.userName = movie.userId ? userMap.get(movie.userId.toString()) || 'Unknown' : undefined
+        return formatted
+      }),
+      ...watchedMovies.map((movie) => {
+        const formatted = formatMovie(movie, true)
+        formatted.userName = movie.userId ? userMap.get(movie.userId.toString()) || 'Unknown' : undefined
+        return formatted
+      }),
     ]
 
     // Sort by creation date
