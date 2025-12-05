@@ -19,10 +19,19 @@ export async function GET(request: NextRequest) {
     
     await connectDB()
     
-    // Allow guest mode when no auth cookie is present
-    // For public viewing, we don't filter by userId here, but we still need it for POST/PUT/DELETE
-    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
-    // const userId = user.userId // Removed filtering by userId for GET
+    // Check if we should show all movies (for homepage recommended section)
+    const showAll = request.nextUrl.searchParams.get('all') === 'true'
+    
+    // Get authenticated user
+    const user = getUserFromRequestCookie()
+    const userId = user?.userId
+    
+    // If showAll=true, show all movies regardless of authentication (for homepage)
+    // If user is authenticated and showAll=false, only show their movies (for dashboard)
+    // If not authenticated, show all movies (for homepage public viewing)
+    const movieFilter = (showAll || !userId || !mongoose.Types.ObjectId.isValid(userId))
+      ? {}
+      : { userId: new mongoose.Types.ObjectId(userId) }
 
     // Normalize legacy/invalid image values before sending to the client
     const normalizeImageUrl = (value: unknown): string | null => {
@@ -58,10 +67,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get movies from both collections (fetch all, not filtered by userId)
+    // Get movies from both collections (filtered by userId if authenticated)
     const [toWatchMovies, watchedMovies] = await Promise.all([
-      MovieToWatch.find({}).sort({ createdAt: -1 }), // Fetch all
-      MovieWatched.find({}).sort({ createdAt: -1 }), // Fetch all
+      MovieToWatch.find(movieFilter).sort({ createdAt: -1 }),
+      MovieWatched.find(movieFilter).sort({ createdAt: -1 }),
     ])
     
     // Get all unique user IDs from movies

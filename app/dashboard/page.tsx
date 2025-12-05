@@ -67,12 +67,10 @@ const SAMPLE_TRENDING_MOVIES: Movie[] = [
 function DashboardContent() {
   const searchParams = useSearchParams()
   const [movies, setMovies] = useState<Movie[]>([])
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'unwatched' | 'watched'>('all')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState('')
   const [selectedRating, setSelectedRating] = useState('')
   const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
@@ -99,22 +97,6 @@ function DashboardContent() {
     }
   }, [searchParams])
 
-  // Load users on mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users')
-        if (response.ok) {
-          const data = await response.json()
-          setUsers(data.users || [])
-        }
-      } catch (error) {
-        console.error('Error loading users:', error)
-      }
-    }
-    fetchUsers()
-  }, [])
-
   // Load movies on mount
   useEffect(() => {
     const fetchMovies = async () => {
@@ -136,9 +118,13 @@ function DashboardContent() {
       }
     }
 
-    // Always fetch movies (public viewing)
-    fetchMovies()
-  }, [])
+    // Fetch movies only if authenticated
+    if (isAuthenticated && currentUserId) {
+      fetchMovies()
+    } else {
+      setIsLoading(false)
+    }
+  }, [isAuthenticated, currentUserId])
 
   // Get unique genres and years
   const genres = useMemo(() => {
@@ -157,9 +143,12 @@ function DashboardContent() {
     return Array.from(yearSet).sort((a, b) => b - a)
   }, [movies])
 
-  // Filter and sort movies
+  // Filter and sort movies (only show current user's movies)
   const filteredAndSortedMovies = useMemo(() => {
-    let filtered = movies.filter(movie => {
+    // First filter to only show current user's movies
+    const userMovies = movies.filter(movie => movie.userId === currentUserId)
+    
+    let filtered = userMovies.filter(movie => {
       // Search filter
       const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase())
       
@@ -175,14 +164,11 @@ function DashboardContent() {
       // Year filter
       const matchesYear = !selectedYear || movie.year?.toString() === selectedYear
       
-      // User filter
-      const matchesUser = !selectedUserId || movie.userId === selectedUserId
-      
       // Rating filter (only for watched movies)
       const matchesRating = !selectedRating || 
         (movie.watched && movie.rating && movie.rating >= parseInt(selectedRating, 10))
       
-      return matchesSearch && matchesType && matchesGenre && matchesYear && matchesUser && matchesRating
+      return matchesSearch && matchesType && matchesGenre && matchesYear && matchesRating
     })
 
     // Sort
@@ -199,22 +185,24 @@ function DashboardContent() {
     })
 
     return filtered
-  }, [movies, searchQuery, filterType, selectedGenre, selectedYear, selectedUserId, selectedRating, sortBy])
+  }, [movies, currentUserId, searchQuery, filterType, selectedGenre, selectedYear, selectedRating, sortBy])
 
   const toWatchMovies = filteredAndSortedMovies.filter(m => !m.watched)
   const watchedMovies = filteredAndSortedMovies.filter(m => m.watched)
 
-  // Stats
+  // Stats (only for current user's movies - already filtered above)
+  // Stats (only for current user's movies - already filtered above)
   const stats = useMemo(() => {
-    const total = movies.length
-    const watched = movies.filter(m => m.watched).length
+    const userMoviesList = movies.filter(m => m.userId === currentUserId)
+    const total = userMoviesList.length
+    const watched = userMoviesList.filter(m => m.watched).length
     const toWatch = total - watched
-    const lastUpdated = movies.length > 0 
-      ? new Date(Math.max(...movies.map(m => new Date(m.createdAt).getTime()))).toLocaleDateString()
+    const lastUpdated = userMoviesList.length > 0 
+      ? new Date(Math.max(...userMoviesList.map(m => new Date(m.createdAt).getTime()))).toLocaleDateString()
       : 'Never'
 
     return { total, watched, toWatch, lastUpdated }
-  }, [movies])
+  }, [movies, currentUserId])
 
   // Handlers
   const handleToggleWatched = async (id: string) => {
@@ -396,9 +384,6 @@ function DashboardContent() {
         years={years}
         onAddMovie={() => setShowAddMovieModal(true)}
         hideAuth={true}
-        selectedUserId={selectedUserId}
-        onUserIdChange={setSelectedUserId}
-        users={users}
         selectedRating={selectedRating}
         onRatingChange={setSelectedRating}
       />
@@ -464,7 +449,7 @@ function DashboardContent() {
         {watchedMovies.length > 0 && (
           <SectionRow title="Watched Movies" horizontal>
             {watchedMovies.map(movie => {
-              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              const isOwner = true // All movies shown are user's own
               return (
                 <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
                   <MovieCard
@@ -498,7 +483,7 @@ function DashboardContent() {
 
               <SectionRow title="All Movies">
                 {filteredAndSortedMovies.map(movie => {
-                  const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+                  const isOwner = true // All movies shown are user's own
                   return (
                     <MovieCard
                       key={movie.id}

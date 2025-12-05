@@ -18,11 +18,16 @@ const getUserId = async (): Promise<string | null> => {
   return null
 }
 
-export const loadMovies = async (): Promise<Movie[]> => {
-  if (typeof window === 'undefined') return []
-  
-  try {
-    const response = await fetch(API_BASE)
+  export const loadMovies = async (allMovies: boolean = false): Promise<Movie[]> => {
+    if (typeof window === 'undefined') return []
+
+    try {
+      // If allMovies is true, add query parameter to get all movies (for homepage)
+      // Otherwise, fetch normally to get user-specific movies (for dashboard)
+      const url = allMovies ? `${API_BASE}?all=true` : API_BASE
+      const response = await fetch(url, {
+        credentials: 'include'
+      })
 
     if (!response.ok) {
       if (response.status === 401) {

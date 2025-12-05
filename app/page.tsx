@@ -15,19 +15,20 @@ import { loadMovies } from '@/app/lib/storage-mongodb'
 
 export default function Home() {
   const router = useRouter()
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, isAdmin } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
   const [movies, setMovies] = useState<Movie[]>([])
   const [isLoadingMovies, setIsLoadingMovies] = useState(true)
 
-  // Load movies on mount
+  // Load movies on mount - always fetch all movies for recommended section
   useEffect(() => {
     const fetchMovies = async () => {
       setIsLoadingMovies(true)
       try {
-        const loaded = await loadMovies()
+        // Pass true to loadMovies to fetch all movies (without credentials)
+        const loaded = await loadMovies(true)
         setMovies(loaded)
       } catch (error) {
         console.error('Error loading movies:', error)
@@ -84,15 +85,15 @@ export default function Home() {
                     onClick={() => router.push('/dashboard')}
                     className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#E50914] transition-colors"
                   >
-                    Movies List
+                    My Movies List
                   </button>
-                  <button
-                    onClick={() => router.push('/dashboard?filter=watched')}
-                    className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#10B981] transition-colors"
-                  >
-                    Watched Movies
-                  </button>
-                  {user?.role === 'admin' && (
+                    <button
+                      onClick={() => router.push('/dashboard?filter=watched')}
+                      className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#10B981] transition-colors"
+                    >
+                      My Watched Movies
+                    </button>
+                  {isAdmin && (
                     <button
                       onClick={() => router.push('/admin')}
                       className="px-3 py-2 bg-[#8B5CF6] border border-[#8B5CF6] rounded-lg text-white text-sm font-medium hover:bg-[#7C3AED] transition-colors"
@@ -101,7 +102,7 @@ export default function Home() {
                     </button>
                   )}
                   <span className="text-sm text-[#A3A3A3] hidden lg:block">
-                    Welcome, {user?.role === 'admin' && <span className="text-yellow-400">👑</span>} {user?.name}
+                    Welcome, {isAdmin && <span className="text-yellow-400">👑</span>} {user?.name}
                   </span>
                 </div>
                 <button
@@ -110,7 +111,7 @@ export default function Home() {
                 >
                   Dashboard
                 </button>
-                {user?.role === 'admin' && (
+                {isAdmin && (
                   <button
                     onClick={() => router.push('/admin')}
                     className="px-4 py-2 bg-[#8B5CF6] text-white rounded-lg font-semibold hover:bg-[#7C3AED] transition-all"
@@ -259,8 +260,8 @@ export default function Home() {
                         // Navigate to dashboard if user wants to rate
                         router.push('/dashboard')
                       }}
-                      currentUserId={user?.id || user?.userId || undefined}
-                      isOwner={user && movie.userId && (user.id || user.userId) === movie.userId}
+                      currentUserId={user?.id || undefined}
+                      isOwner={!!(user && movie.userId && user.id === movie.userId)}
                     />
                   </div>
                 ))}
