@@ -34,17 +34,30 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 10);
 
+    // Check if this is the first user - make them admin
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? 'admin' : 'user';
+
     const user = await User.create({
       name,
       password: hashed,
+      role,
     });
 
-    const token = signToken({ userId: user._id.toString(), name: user.name });
+    const token = signToken({ 
+      userId: user._id.toString(), 
+      name: user.name,
+      role: user.role || 'user'
+    });
 
     const res = NextResponse.json(
       {
         message: "Signup successful",
-        user: { id: user._id, name: user.name },
+        user: { 
+          id: user._id, 
+          name: user.name,
+          role: user.role || 'user'
+        },
       },
       { status: 201 }
     );

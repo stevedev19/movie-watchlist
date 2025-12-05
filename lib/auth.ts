@@ -11,7 +11,7 @@ function getJWTSecret() {
   return JWT_SECRET;
 }
 
-export function signToken(payload: { userId: string; name: string }) {
+export function signToken(payload: { userId: string; name: string; role?: 'admin' | 'user' }) {
   return jwt.sign(payload, getJWTSecret(), { expiresIn: JWT_EXPIRES_IN });
 }
 
@@ -27,10 +27,15 @@ export function getUserFromRequestCookie() {
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; name: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; name: string; role?: 'admin' | 'user' };
     return decoded;
   } catch (err) {
     return null;
   }
+}
+
+// Check if user is admin
+export function isAdmin(user: { userId: string; name: string; role?: 'admin' | 'user' } | null): boolean {
+  return user?.role === 'admin';
 }
 

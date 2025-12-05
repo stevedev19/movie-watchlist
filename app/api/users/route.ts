@@ -15,11 +15,12 @@ export async function GET(request: NextRequest) {
     await connectToDB()
     
     // Get all users
-    const users = await User.find({}).select('_id name').sort({ name: 1 })
+    const users = await User.find({}).select('_id name role').sort({ name: 1 })
     
     const usersList = users.map(user => ({
       id: user._id.toString(),
       name: user.name || 'Unknown',
+      role: (user as any).role || 'user',
     }))
     
     return NextResponse.json({ users: usersList })
