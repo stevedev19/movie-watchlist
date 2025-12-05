@@ -11,7 +11,7 @@ import { LampContainer } from '@/components/ui/lamp'
 
 export default function Home() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, logout } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
@@ -69,6 +69,15 @@ export default function Home() {
                   className="px-4 py-2 netflix-red text-white rounded-lg font-semibold netflix-red-hover transition-all"
                 >
                   Dashboard
+                </button>
+                <button
+                  onClick={async () => {
+                    await logout()
+                    router.push('/')
+                  }}
+                  className="px-4 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#E50914] transition-colors"
+                >
+                  Logout
                 </button>
               </>
             ) : (
@@ -150,6 +159,16 @@ export default function Home() {
               </>
             ) : (
               <>
+                <button
+                  onClick={() => {
+                    alert('Please login first to add a new movie')
+                    setShowLoginModal(true)
+                  }}
+                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20 flex items-center justify-center gap-2"
+                >
+                  <span>➕</span>
+                  <span>Add New Movie</span>
+                </button>
                 <button
                   onClick={handleGetStarted}
                   className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20"
