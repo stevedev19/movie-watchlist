@@ -73,6 +73,9 @@ function DashboardContent() {
   const [selectedYear, setSelectedYear] = useState('')
   const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editGenre, setEditGenre] = useState('')
+  const [editYear, setEditYear] = useState('')
   const [editNotes, setEditNotes] = useState('')
   const [editImageFile, setEditImageFile] = useState<File | null>(null)
   const [editImagePreview, setEditImagePreview] = useState<string>('')
@@ -206,11 +209,22 @@ function DashboardContent() {
   }
 
   const handleDelete = async (id: string) => {
+    const movie = movies.find(m => m.id === id)
+    const movieTitle = movie?.title || 'this movie'
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(`Are you really going to delete "${movieTitle}"?`)
+    
+    if (!confirmed) {
+      return // User cancelled deletion
+    }
+
     try {
       const updated = await deleteMovie(id)
       setMovies(updated)
     } catch (error) {
       console.error('Error deleting movie:', error)
+      alert('Failed to delete movie. Please try again.')
     }
   }
 
@@ -244,6 +258,9 @@ function DashboardContent() {
 
   const handleEditNotes = (movie: Movie) => {
     setEditingMovie(movie)
+    setEditTitle(movie.title || '')
+    setEditGenre(movie.genre || '')
+    setEditYear(movie.year?.toString() || '')
     setEditNotes(movie.notes || '')
     setEditImageUrl(movie.imageUrl || movie.image || '')
     setEditImageFile(null)
@@ -290,6 +307,12 @@ function DashboardContent() {
   const handleSaveNotes = async () => {
     if (editingMovie) {
       try {
+        // Validate title
+        if (!editTitle.trim()) {
+          alert('Movie title is required')
+          return
+        }
+
         setIsUploadingImage(true)
         
         // Use preview (base64) if available, otherwise keep current image or clear if removed
@@ -300,9 +323,12 @@ function DashboardContent() {
           finalImage = undefined
         }
 
-        // Update movie with notes and image
+        // Update movie with title, genre, year, notes, and image
         const updates: Partial<Movie> = { 
-          notes: editNotes,
+          title: editTitle.trim(),
+          genre: editGenre.trim() || undefined,
+          year: editYear ? parseInt(editYear, 10) : undefined,
+          notes: editNotes.trim() || undefined,
         }
         
         // Update image if it changed (new preview or was removed)
@@ -315,6 +341,9 @@ function DashboardContent() {
         const updated = await updateMovie(editingMovie.id, updates)
         setMovies(updated)
         setEditingMovie(null)
+        setEditTitle('')
+        setEditGenre('')
+        setEditYear('')
         setEditNotes('')
         setEditImageFile(null)
         setEditImagePreview('')
@@ -342,6 +371,7 @@ function DashboardContent() {
         genres={genres}
         years={years}
         onAddMovie={() => setShowAddMovieModal(true)}
+        hideAuth={true}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -499,10 +529,13 @@ function DashboardContent() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="netflix-card rounded-lg p-6 max-w-2xl w-full my-8">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Edit Movie: {editingMovie.title}</h3>
+              <h3 className="text-xl font-bold text-white">Edit Movie</h3>
               <button
                 onClick={() => {
                   setEditingMovie(null)
+                  setEditTitle('')
+                  setEditGenre('')
+                  setEditYear('')
                   setEditNotes('')
                   setEditImageFile(null)
                   setEditImagePreview('')
@@ -515,6 +548,54 @@ function DashboardContent() {
             </div>
 
             <div className="space-y-6">
+              {/* Title Section */}
+              <div>
+                <label htmlFor="edit-title" className="block text-sm font-medium text-[#A3A3A3] mb-2">
+                  Movie Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="edit-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
+                  placeholder="Enter movie title"
+                  required
+                />
+              </div>
+
+              {/* Genre and Year Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="edit-genre" className="block text-sm font-medium text-[#A3A3A3] mb-2">
+                    Genre
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-genre"
+                    value={editGenre}
+                    onChange={(e) => setEditGenre(e.target.value)}
+                    className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
+                    placeholder="e.g., Action, Drama, Comedy"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-year" className="block text-sm font-medium text-[#A3A3A3] mb-2">
+                    Year
+                  </label>
+                  <input
+                    type="number"
+                    id="edit-year"
+                    value={editYear}
+                    onChange={(e) => setEditYear(e.target.value)}
+                    className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
+                    placeholder="e.g., 2023"
+                    min={1900}
+                    max={new Date().getFullYear() + 1}
+                  />
+                </div>
+              </div>
+
               {/* Image Section */}
               <div>
                 <label className="block text-sm font-medium text-[#A3A3A3] mb-2">
@@ -609,6 +690,9 @@ function DashboardContent() {
                 <button
                   onClick={() => {
                     setEditingMovie(null)
+                    setEditTitle('')
+                    setEditGenre('')
+                    setEditYear('')
                     setEditNotes('')
                     setEditImageFile(null)
                     setEditImagePreview('')
