@@ -71,7 +71,6 @@ function DashboardContent() {
   const [filterType, setFilterType] = useState<'all' | 'unwatched' | 'watched'>('all')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
-  const [selectedRating, setSelectedRating] = useState('')
   const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -85,7 +84,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
   const { isAuthenticated, user } = useAuth()
-  const currentUserId = user?.id || user?.userId || undefined
+  const currentUserId = user?.id || undefined
 
   // Handle URL query parameters for filtering
   useEffect(() => {
@@ -164,11 +163,7 @@ function DashboardContent() {
       // Year filter
       const matchesYear = !selectedYear || movie.year?.toString() === selectedYear
       
-      // Rating filter (only for watched movies)
-      const matchesRating = !selectedRating || 
-        (movie.watched && movie.rating && movie.rating >= parseInt(selectedRating, 10))
-      
-      return matchesSearch && matchesType && matchesGenre && matchesYear && matchesRating
+      return matchesSearch && matchesType && matchesGenre && matchesYear
     })
 
     // Sort
@@ -185,7 +180,7 @@ function DashboardContent() {
     })
 
     return filtered
-  }, [movies, currentUserId, searchQuery, filterType, selectedGenre, selectedYear, selectedRating, sortBy])
+  }, [movies, currentUserId, searchQuery, filterType, selectedGenre, selectedYear, sortBy])
 
   const toWatchMovies = filteredAndSortedMovies.filter(m => !m.watched)
   const watchedMovies = filteredAndSortedMovies.filter(m => m.watched)
@@ -345,8 +340,8 @@ function DashboardContent() {
         
         // Update image if it changed (new preview or was removed)
         if (editImagePreview || editImageUrl === '') {
-          updates.imageUrl = finalImage || null
-          updates.image = finalImage || null // keep backward compat
+          updates.imageUrl = finalImage || undefined
+          updates.image = finalImage || undefined // keep backward compat
           updates.hasImage = !!finalImage
         }
 
@@ -384,8 +379,6 @@ function DashboardContent() {
         years={years}
         onAddMovie={() => setShowAddMovieModal(true)}
         hideAuth={true}
-        selectedRating={selectedRating}
-        onRatingChange={setSelectedRating}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -427,7 +420,7 @@ function DashboardContent() {
         {toWatchMovies.length > 0 && (
           <SectionRow title="Your Watchlist" horizontal>
             {toWatchMovies.map(movie => {
-              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              const isOwner = !!(currentUserId && movie.userId && currentUserId === movie.userId)
               return (
                 <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
                   <MovieCard

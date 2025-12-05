@@ -150,12 +150,6 @@ export default function MovieCard({
         </div>
 
         {/* User who registered the movie */}
-        {movie.userName && (
-          <div className="flex items-center gap-1 text-xs text-[#A3A3A3] mb-2">
-            <span>👤</span>
-            <span>Added by {movie.userName}</span>
-          </div>
-        )}
 
         {/* Added date */}
         {movie.createdAt && (
