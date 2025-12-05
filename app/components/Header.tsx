@@ -17,6 +17,7 @@ interface HeaderProps {
   onYearChange: (year: string) => void
   genres: string[]
   years: number[]
+  onAddMovie?: () => void
 }
 
 export default function Header({
@@ -30,6 +31,7 @@ export default function Header({
   onYearChange,
   genres,
   years,
+  onAddMovie,
 }: HeaderProps) {
   const router = useRouter()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -101,6 +103,14 @@ export default function Header({
           <div className="flex-shrink-0 flex items-center gap-3">
             {isAuthenticated ? (
               <>
+                {onAddMovie && (
+                  <button
+                    onClick={onAddMovie}
+                    className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-all hidden md:block"
+                  >
+                    ➕ Add Movie
+                  </button>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[#A3A3A3] hidden lg:block">Welcome,</span>
                   <span className="text-sm font-semibold text-white flex items-center gap-1">

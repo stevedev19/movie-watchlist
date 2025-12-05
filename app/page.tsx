@@ -4,13 +4,17 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from './contexts/AuthContext'
 import LoginModal from './components/LoginModal'
 import SignupModal from './components/SignupModal'
+import AddMovieModal from './components/AddMovieModal'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { LampContainer } from '@/components/ui/lamp'
 
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [showAddMovieModal, setShowAddMovieModal] = useState(false)
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -34,19 +38,37 @@ export default function Home() {
       {/* Header */}
       <header className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
             <span className="text-3xl">🎬</span>
             <h1 className="text-2xl font-bold text-white">MyWatchlist</h1>
-          </div>
+          </button>
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <span className="text-sm text-[#A3A3A3] hidden sm:block">Welcome, {user?.name}</span>
+                {/* Desktop Navigation */}
+                <div className="hidden md:flex items-center gap-3">
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#E50914] transition-colors"
+                  >
+                    Movies List
+                  </button>
+                  <button
+                    onClick={() => router.push('/dashboard?filter=watched')}
+                    className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#10B981] transition-colors"
+                  >
+                    Watched Movies
+                  </button>
+                  <span className="text-sm text-[#A3A3A3] hidden lg:block">Welcome, {user?.name}</span>
+                </div>
                 <button
                   onClick={() => router.push('/dashboard')}
                   className="px-4 py-2 netflix-red text-white rounded-lg font-semibold netflix-red-hover transition-all"
                 >
-                  Go to Dashboard
+                  Dashboard
                 </button>
               </>
             ) : (
@@ -69,38 +91,78 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
-        <div className="text-center max-w-4xl mx-auto">
-          {/* Hero Section */}
-          <div className="mb-12 animate-slide-up">
-            <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+      {/* Hero Section with Lamp Effect */}
+      <div className="relative -mt-20">
+        <LampContainer className="min-h-[80vh]">
+          <motion.div
+            initial={{ opacity: 0.5, y: 100 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.3,
+              duration: 0.8,
+              ease: "easeInOut",
+            }}
+            className="text-center"
+          >
+            <h2 className="mt-8 bg-gradient-to-br from-slate-300 to-slate-500 py-4 bg-clip-text text-center text-4xl font-medium tracking-tight text-transparent md:text-7xl mb-6">
               Track Your
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#E50914] to-[#3B82F6]">
+              <br />
+              <span className="bg-gradient-to-br from-[#E50914] to-[#3B82F6] bg-clip-text text-transparent">
                 Movie Journey
               </span>
             </h2>
-            <p className="text-xl md:text-2xl text-[#A3A3A3] mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-slate-400 mb-8 leading-relaxed max-w-2xl mx-auto px-4">
               Never forget a movie you want to watch. Organize your watchlist, 
               rate what you've seen, and discover your next favorite film.
             </p>
-          </div>
+          </motion.div>
+        </LampContainer>
+      </div>
+
+      {/* Main Content */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
+        <div className="text-center max-w-4xl mx-auto">
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <button
-              onClick={handleGetStarted}
-              className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20"
-            >
-              {isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}
-            </button>
-            {!isAuthenticated && (
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
-              >
-                Sign In
-              </button>
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setShowAddMovieModal(true)}
+                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20 flex items-center justify-center gap-2"
+                >
+                  <span>➕</span>
+                  <span>Add New Movie</span>
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard?filter=watched')}
+                  className="px-8 py-4 bg-[#10B981] text-white rounded-lg font-bold text-lg hover:bg-[#059669] transition-all transform hover:scale-105 shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
+                >
+                  <span>✅</span>
+                  <span>Watched Movies</span>
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
+                >
+                  View All Movies
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleGetStarted}
+                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20"
+                >
+                  Get Started Free
+                </button>
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
+                >
+                  Sign In
+                </button>
+              </>
             )}
           </div>
 
@@ -185,6 +247,16 @@ export default function Home() {
           onSwitchToLogin={() => {
             setShowSignupModal(false)
             setShowLoginModal(true)
+          }}
+        />
+      )}
+
+      {showAddMovieModal && (
+        <AddMovieModal
+          onClose={() => setShowAddMovieModal(false)}
+          onSuccess={() => {
+            // Optionally refresh or redirect
+            router.push('/dashboard')
           }}
         />
       )}

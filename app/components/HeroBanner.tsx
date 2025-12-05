@@ -8,7 +8,7 @@ interface HeroBannerProps {
 }
 
 export default function HeroBanner({ movie, onAddToWatchlist }: HeroBannerProps) {
-  const posterUrl = `https://picsum.photos/seed/${movie.id}/1920/1080`
+  const posterUrl = movie.image || `https://picsum.photos/seed/${movie.id}/1920/1080`
   
   return (
     <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden rounded-lg mb-8 netflix-glow">

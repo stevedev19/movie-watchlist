@@ -33,6 +33,12 @@ export const loadMovies = async (): Promise<Movie[]> => {
     }
 
     const data = await response.json()
+    console.log('🔵 [storage-mongodb] Loaded movies:', (data.movies || []).map((m: Movie) => ({
+      title: m.title,
+      hasImage: m.hasImage,
+      imageUrl: m.imageUrl ? m.imageUrl.substring(0, 50) + '...' : 'NO IMAGE URL',
+      imageType: m.imageType
+    })))
     return data.movies || []
   } catch (error) {
     console.error('Error loading movies from MongoDB:', error)
@@ -56,6 +62,16 @@ export const addMovie = async (movie: Movie): Promise<Movie[]> => {
       watched: movie.watched || false,
     }
 
+    // 🔥 CRITICAL: Log what we're sending to API
+    console.log('[storage-mongodb] Sending movie to API:', {
+      title: movieToAdd.title,
+      imageUrl: movieToAdd.imageUrl ? movieToAdd.imageUrl.substring(0, 80) : 'NULL/MISSING',
+      hasImage: movieToAdd.hasImage,
+      imageType: movieToAdd.imageType,
+      imageUrlLength: movieToAdd.imageUrl?.length || 0,
+      imageUrlType: typeof movieToAdd.imageUrl,
+    })
+
     const response = await fetch(API_BASE, {
       method: 'POST',
       headers: {
@@ -72,7 +88,24 @@ export const addMovie = async (movie: Movie): Promise<Movie[]> => {
       throw new Error(errorData.error || 'Failed to add movie')
     }
 
+    const data = await response.json()
+    // 🔥 CRITICAL: Log API response
+    console.log('[storage-mongodb] API Response:', {
+      movieId: data.movie?.id,
+      movieTitle: data.movie?.title,
+      imageUrlInResponse: data.movie?.imageUrl ? data.movie.imageUrl.substring(0, 80) : 'NULL/MISSING',
+      hasImage: data.movie?.hasImage,
+      imageType: data.movie?.imageType,
+    })
+
     const updated = await loadMovies()
+    // 🔥 CRITICAL: Log movies after reload
+    console.log('[storage-mongodb] Movies loaded after add:', updated.map(m => ({
+      title: m.title,
+      imageUrl: m.imageUrl ? m.imageUrl.substring(0, 80) : 'NULL/MISSING',
+      hasImage: m.hasImage,
+      imageType: m.imageType,
+    })))
     return updated
   } catch (error) {
     console.error('Error adding movie to MongoDB:', error)

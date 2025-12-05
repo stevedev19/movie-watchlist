@@ -19,7 +19,20 @@ export default function MovieCard({
   onEditNotes 
 }: MovieCardProps) {
   const [showActions, setShowActions] = useState(false)
-  const posterUrl = `https://picsum.photos/seed/${movie.id}/300/450`
+  
+  // Debug log - show what we have
+  console.log('[MovieCard Poster]', movie.title, {
+    imageUrl: movie.imageUrl,
+    hasImage: movie.hasImage,
+    imageType: movie.imageType,
+  })
+
+  // Decide purely based on imageUrl, not hasImage
+  // Ignore hasImage completely - just check if imageUrl is a valid string
+  const hasPoster =
+    typeof movie.imageUrl === 'string' &&
+    movie.imageUrl.trim() !== '' &&
+    movie.imageUrl !== 'none'
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -51,12 +64,29 @@ export default function MovieCard({
       onMouseLeave={() => setShowActions(false)}
     >
       {/* Poster */}
-      <div className="relative aspect-[2/3] overflow-hidden">
-        <img 
-          src={posterUrl} 
-          alt={movie.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-        />
+      <div className="relative aspect-[2/3] overflow-hidden bg-[#181818]">
+        {hasPoster ? (
+          <img 
+            src={movie.imageUrl as string}
+            alt={movie.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+            onError={(e) => {
+              console.error(`❌ [MovieCard] Failed to load image for ${movie.title}`, {
+                attemptedUrl: e.currentTarget.src.substring(0, 100),
+                imageUrl: movie.imageUrl?.substring(0, 100),
+              })
+              // Fallback to placeholder
+              e.currentTarget.src = `https://picsum.photos/seed/${movie.id}/300/450`
+            }}
+            onLoad={() => {
+              console.log(`✅ [MovieCard] Successfully loaded image for ${movie.title}`)
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[#A3A3A3] text-sm bg-[#181818]">
+            No poster
+          </div>
+        )}
         
         {/* Dark overlay on hover */}
         <div className={`absolute inset-0 bg-black transition-opacity duration-300 ${
@@ -173,4 +203,3 @@ export default function MovieCard({
     </div>
   )
 }
-

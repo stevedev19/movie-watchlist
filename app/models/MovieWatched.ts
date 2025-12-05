@@ -19,6 +19,18 @@ const MovieWatchedSchema = new Schema<MovieWatchedDocument>(
     genre: {
       type: String,
     },
+    image: {
+      type: String,
+    },
+    imageUrl: {
+      type: String,
+    },
+    hasImage: {
+      type: Boolean,
+    },
+    imageType: {
+      type: String,
+    },
     notes: {
       type: String,
     },

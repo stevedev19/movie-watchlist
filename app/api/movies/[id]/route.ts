@@ -7,6 +7,15 @@ import { Movie as MovieType } from '@/types/movie'
 import mongoose from 'mongoose'
 import { getUserFromRequestCookie } from '@/lib/auth'
 
+const normalizeImageUrl = (value: unknown): string | null => {
+  if (!value || typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const lowered = trimmed.toLowerCase()
+  if (['none', 'null', 'undefined', 'false', '0'].includes(lowered)) return null
+  return trimmed
+}
+
 // GET /api/movies/[id] - Get a single movie
 export async function GET(
   request: NextRequest,
@@ -22,15 +31,8 @@ export async function GET(
     
     await connectDB()
     
-    const user = getUserFromRequestCookie()
-    
-    if (!user || !user.userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
+    // Allow guest mode when no auth cookie is present
+    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
     const userId = user.userId
 
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
@@ -56,11 +58,20 @@ export async function GET(
       )
     }
 
+    const normalizedImageUrl = normalizeImageUrl(movie.imageUrl) || normalizeImageUrl(movie.image)
+    const normalizedImage = normalizeImageUrl(movie.image)
+    const hasImage = normalizedImageUrl ? true : movie.hasImage !== undefined ? !!movie.hasImage : false
+    const imageType = movie.imageType || (normalizedImageUrl ? 'uploaded' : 'other')
+
     const movieData: MovieType = {
       id: movie._id.toString(),
       title: movie.title,
       year: movie.year,
       genre: movie.genre,
+      image: normalizedImage || undefined,
+      imageUrl: normalizedImageUrl,
+      hasImage,
+      imageType,
       notes: movie.notes,
       rating: movie.rating,
       watched: isWatched,
@@ -93,15 +104,8 @@ export async function PUT(
     
     await connectDB()
     
-    const user = getUserFromRequestCookie()
-    
-    if (!user || !user.userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
+    // Allow guest mode when no auth cookie is present
+    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
     const userId = user.userId
 
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
@@ -112,7 +116,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, year, genre, notes, watched, rating, watchedAt } = body
+    const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating, watchedAt } = body
 
     // Find which collection the movie is in
     let movieInToWatch = await MovieToWatch.findOne({ _id: params.id, userId })
@@ -129,10 +133,21 @@ export async function PUT(
     if (watched !== undefined) {
       if (watched === true && movieInToWatch) {
         // Move from to-watch to watched
+        const incomingImageUrl = normalizeImageUrl(imageUrl ?? image)
+        const sourceImageUrl = normalizeImageUrl(movieInToWatch.imageUrl) || normalizeImageUrl(movieInToWatch.image)
+        const finalImageUrl = incomingImageUrl ?? sourceImageUrl
+        const finalImage = normalizeImageUrl(image) || incomingImageUrl || sourceImageUrl
+        const finalHasImage = finalImageUrl ? true : hasImage !== undefined ? !!hasImage : false
+        const finalImageType = imageType || movieInToWatch.imageType || (finalImageUrl ? 'uploaded' : 'other')
+
         const movieData = {
           title: title || movieInToWatch.title,
           year: year !== undefined ? year : movieInToWatch.year,
           genre: genre !== undefined ? genre : movieInToWatch.genre,
+          image: finalImage || undefined,
+          imageUrl: finalImageUrl,
+          hasImage: finalHasImage,
+          imageType: finalImageType,
           notes: notes !== undefined ? notes : movieInToWatch.notes,
           rating: rating !== undefined ? rating : movieInToWatch.rating,
           watched: true,
@@ -150,6 +165,10 @@ export async function PUT(
           title: newMovie.title,
           year: newMovie.year,
           genre: newMovie.genre,
+          image: normalizeImageUrl(newMovie.image) || undefined,
+          imageUrl: normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image),
+          hasImage: newMovie.hasImage !== undefined ? !!newMovie.hasImage && !!(normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)) : !!(normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)),
+          imageType: newMovie.imageType || ((normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)) ? 'uploaded' : 'other'),
           notes: newMovie.notes,
           rating: newMovie.rating,
           watched: true,
@@ -160,10 +179,21 @@ export async function PUT(
         return NextResponse.json({ movie: movieResult })
       } else if (watched === false && movieInWatched) {
         // Move from watched to to-watch
+        const incomingImageUrl = normalizeImageUrl(imageUrl ?? image)
+        const sourceImageUrl = normalizeImageUrl(movieInWatched.imageUrl) || normalizeImageUrl(movieInWatched.image)
+        const finalImageUrl = incomingImageUrl ?? sourceImageUrl
+        const finalImage = normalizeImageUrl(image) || incomingImageUrl || sourceImageUrl
+        const finalHasImage = finalImageUrl ? true : hasImage !== undefined ? !!hasImage : false
+        const finalImageType = imageType || movieInWatched.imageType || (finalImageUrl ? 'uploaded' : 'other')
+
         const movieData = {
           title: title || movieInWatched.title,
           year: year !== undefined ? year : movieInWatched.year,
           genre: genre !== undefined ? genre : movieInWatched.genre,
+          image: finalImage || undefined,
+          imageUrl: finalImageUrl,
+          hasImage: finalHasImage,
+          imageType: finalImageType,
           notes: notes !== undefined ? notes : movieInWatched.notes,
           watched: false,
           createdAt: movieInWatched.createdAt,
@@ -179,6 +209,10 @@ export async function PUT(
           title: newMovie.title,
           year: newMovie.year,
           genre: newMovie.genre,
+          image: normalizeImageUrl(newMovie.image) || undefined,
+          imageUrl: normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image),
+          hasImage: newMovie.hasImage !== undefined ? !!newMovie.hasImage && !!(normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)) : !!(normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)),
+          imageType: newMovie.imageType || ((normalizeImageUrl(newMovie.imageUrl) || normalizeImageUrl(newMovie.image)) ? 'uploaded' : 'other'),
           notes: newMovie.notes,
           watched: false,
           createdAt: newMovie.createdAt,
@@ -193,6 +227,22 @@ export async function PUT(
     if (title !== undefined) updateData.title = title
     if (year !== undefined) updateData.year = year
     if (genre !== undefined) updateData.genre = genre
+    // Handle image update - allow setting to null/undefined to clear it
+    if (image !== undefined) {
+      updateData.image = normalizeImageUrl(image) || null
+    }
+    if (imageUrl !== undefined) {
+      updateData.imageUrl = normalizeImageUrl(imageUrl) || null
+    }
+    if (hasImage !== undefined) {
+      updateData.hasImage = !!hasImage || !!(normalizeImageUrl(imageUrl) || normalizeImageUrl(image))
+    } else if (image !== undefined || imageUrl !== undefined) {
+      const candidate = normalizeImageUrl(imageUrl) || normalizeImageUrl(image)
+      updateData.hasImage = !!candidate
+    }
+    if (imageType !== undefined) {
+      updateData.imageType = imageType || ((normalizeImageUrl(imageUrl) || normalizeImageUrl(image)) ? 'uploaded' : 'other')
+    }
     if (notes !== undefined) updateData.notes = notes
     if (rating !== undefined) updateData.rating = rating
     if (watchedAt !== undefined) updateData.watchedAt = watchedAt
@@ -219,11 +269,20 @@ export async function PUT(
       )
     }
 
+    const normalizedImageUrl = normalizeImageUrl(updatedMovie.imageUrl) || normalizeImageUrl(updatedMovie.image)
+    const normalizedImage = normalizeImageUrl(updatedMovie.image)
+    const finalHasImage = normalizedImageUrl ? true : updatedMovie.hasImage !== undefined ? !!updatedMovie.hasImage : false
+    const finalImageType = updatedMovie.imageType || (normalizedImageUrl ? 'uploaded' : 'other')
+
     const movieData: MovieType = {
       id: updatedMovie._id.toString(),
       title: updatedMovie.title,
       year: updatedMovie.year,
       genre: updatedMovie.genre,
+      image: normalizedImage || undefined,
+      imageUrl: normalizedImageUrl,
+      hasImage: finalHasImage,
+      imageType: finalImageType,
       notes: updatedMovie.notes,
       rating: updatedMovie.rating,
       watched: !!movieInWatched,

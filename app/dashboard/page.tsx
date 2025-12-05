@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Movie } from '@/types/movie'
 import { loadMovies, addMovie, updateMovie, deleteMovie } from '@/app/lib/storage-mongodb'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,6 +11,7 @@ import StatCard from '../components/StatCard'
 import MovieCard from '../components/MovieCard'
 import SectionRow from '../components/SectionRow'
 import FiltersBar from '../components/FiltersBar'
+import AddMovieModal from '../components/AddMovieModal'
 
 // Sample trending movie for hero
 const SAMPLE_TRENDING: Movie = {
@@ -62,7 +64,8 @@ const SAMPLE_TRENDING_MOVIES: Movie[] = [
   },
 ]
 
-export default function Dashboard() {
+function DashboardContent() {
+  const searchParams = useSearchParams()
   const [movies, setMovies] = useState<Movie[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'unwatched' | 'watched'>('all')
@@ -71,8 +74,23 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
   const [editNotes, setEditNotes] = useState('')
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [editImagePreview, setEditImagePreview] = useState<string>('')
+  const [editImageUrl, setEditImageUrl] = useState<string>('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [showAddMovieModal, setShowAddMovieModal] = useState(false)
   const { isAuthenticated } = useAuth()
+
+  // Handle URL query parameters for filtering
+  useEffect(() => {
+    const filterParam = searchParams.get('filter')
+    if (filterParam === 'watched') {
+      setFilterType('watched')
+    } else if (filterParam === 'unwatched') {
+      setFilterType('unwatched')
+    }
+  }, [searchParams])
 
   // Load movies on mount
   useEffect(() => {
@@ -80,6 +98,13 @@ export default function Dashboard() {
       setIsLoading(true)
       try {
         const loaded = await loadMovies()
+        // 🔥 CRITICAL: Log movies after fetch
+        console.log('[Dashboard] movies after fetch:', loaded.map(m => ({
+          title: m.title,
+          imageUrl: m.imageUrl ? m.imageUrl.substring(0, 80) : 'NULL/MISSING',
+          hasImage: m.hasImage,
+          imageType: m.imageType,
+        })))
         setMovies(loaded)
       } catch (error) {
         console.error('Error loading movies:', error)
@@ -220,17 +245,85 @@ export default function Dashboard() {
   const handleEditNotes = (movie: Movie) => {
     setEditingMovie(movie)
     setEditNotes(movie.notes || '')
+    setEditImageUrl(movie.imageUrl || movie.image || '')
+    setEditImageFile(null)
+    setEditImagePreview('')
+    console.log('Editing movie:', movie.title, 'Current imageUrl:', movie.imageUrl || movie.image || 'none')
+  }
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please select an image file (JPEG, PNG, WebP, or GIF).')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      alert('File size too large. Maximum size is 5MB.')
+      return
+    }
+
+    // Convert to base64 data URL
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setEditImagePreview(reader.result as string)
+      setEditImageFile(null) // We don't need the file object anymore
+    }
+    reader.onerror = () => {
+      alert('Failed to read image file')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveEditImage = () => {
+    setEditImageFile(null)
+    setEditImagePreview('')
+    setEditImageUrl('')
   }
 
   const handleSaveNotes = async () => {
     if (editingMovie) {
       try {
-        const updated = await updateMovie(editingMovie.id, { notes: editNotes })
+        setIsUploadingImage(true)
+        
+        // Use preview (base64) if available, otherwise keep current image or clear if removed
+        let finalImage: string | undefined = editImagePreview || editImageUrl || undefined
+        
+        // If image was removed (empty string), clear it
+        if (editImageUrl === '' && !editImagePreview) {
+          finalImage = undefined
+        }
+
+        // Update movie with notes and image
+        const updates: Partial<Movie> = { 
+          notes: editNotes,
+        }
+        
+        // Update image if it changed (new preview or was removed)
+        if (editImagePreview || editImageUrl === '') {
+          updates.imageUrl = finalImage || null
+          updates.image = finalImage || null // keep backward compat
+          updates.hasImage = !!finalImage
+        }
+
+        const updated = await updateMovie(editingMovie.id, updates)
         setMovies(updated)
         setEditingMovie(null)
         setEditNotes('')
+        setEditImageFile(null)
+        setEditImagePreview('')
+        setEditImageUrl('')
       } catch (error) {
-        console.error('Error saving notes:', error)
+        console.error('Error saving movie:', error)
+        alert(error instanceof Error ? error.message : 'Failed to save changes')
+      } finally {
+        setIsUploadingImage(false)
       }
     }
   }
@@ -248,6 +341,7 @@ export default function Dashboard() {
         onYearChange={setSelectedYear}
         genres={genres}
         years={years}
+        onAddMovie={() => setShowAddMovieModal(true)}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -334,7 +428,7 @@ export default function Dashboard() {
                   }}
                   onDelete={() => {}}
                   onUpdateRating={() => {}}
-                  onEditNotes={() => {}}
+                  onEditNotes={() => handleEditNotes(movie)}
                 />
               </div>
             )
@@ -400,39 +494,163 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Edit Notes Modal */}
+      {/* Edit Movie Modal */}
       {editingMovie && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="netflix-card rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-white mb-4">Edit Notes</h3>
-            <textarea
-              value={editNotes}
-              onChange={(e) => setEditNotes(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] resize-none"
-              placeholder="Add notes about this movie..."
-              rows={4}
-            />
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleSaveNotes}
-                className="flex-1 px-4 py-2 netflix-red text-white rounded-lg font-semibold netflix-red-hover transition-all"
-              >
-                Save
-              </button>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="netflix-card rounded-lg p-6 max-w-2xl w-full my-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Edit Movie: {editingMovie.title}</h3>
               <button
                 onClick={() => {
                   setEditingMovie(null)
                   setEditNotes('')
+                  setEditImageFile(null)
+                  setEditImagePreview('')
+                  setEditImageUrl('')
                 }}
-                className="flex-1 px-4 py-2 bg-[#181818] border border-[#262626] text-white rounded-lg font-semibold hover:bg-[#262626] transition-all"
+                className="text-[#A3A3A3] hover:text-white transition-colors text-2xl"
               >
-                Cancel
+                ×
               </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Image Section */}
+              <div>
+                <label className="block text-sm font-medium text-[#A3A3A3] mb-2">
+                  Movie Image
+                </label>
+                {editImagePreview || editImageUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <img 
+                        src={editImagePreview || editImageUrl} 
+                        alt="Current image" 
+                        className="w-full h-64 object-cover rounded-lg border border-[#262626]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveEditImage}
+                        className="absolute top-2 right-2 px-3 py-1 bg-[#181818] border border-[#262626] text-white text-sm font-semibold rounded-lg hover:bg-[#262626] transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {!editImagePreview && (
+                      <p className="text-xs text-[#A3A3A3]">Current image</p>
+                    )}
+                    {editImagePreview && (
+                      <p className="text-xs text-green-500">New image selected (will be saved)</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label
+                      htmlFor="edit-movie-image"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#262626] border-dashed rounded-lg cursor-pointer bg-[#0F0F0F] hover:bg-[#181818] hover:border-[#E50914] transition-colors"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg
+                          className="w-10 h-10 mb-3 text-[#A3A3A3]"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <p className="mb-2 text-sm text-[#A3A3A3]">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-[#A3A3A3]">
+                          PNG, JPG, GIF, WebP (MAX. 5MB)
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        id="edit-movie-image"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        onChange={handleEditImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes Section */}
+              <div>
+                <label htmlFor="edit-notes" className="block text-sm font-medium text-[#A3A3A3] mb-2">
+                  Notes
+                </label>
+                <textarea
+                  id="edit-notes"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] resize-none"
+                  placeholder="Add notes about this movie..."
+                  rows={4}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={isUploadingImage}
+                  className="flex-1 px-4 py-2 netflix-red text-white rounded-lg font-semibold netflix-red-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUploadingImage ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingMovie(null)
+                    setEditNotes('')
+                    setEditImageFile(null)
+                    setEditImagePreview('')
+                    setEditImageUrl('')
+                  }}
+                  className="flex-1 px-4 py-2 bg-[#181818] border border-[#262626] text-white rounded-lg font-semibold hover:bg-[#262626] transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Movie Modal */}
+      {showAddMovieModal && (
+        <AddMovieModal
+          onClose={() => setShowAddMovieModal(false)}
+          onSuccess={async () => {
+            // Reload movies after adding
+            const loaded = await loadMovies()
+            setMovies(loaded)
+            setShowAddMovieModal(false)
+          }}
+        />
       )}
     </div>
   )
 }
 
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">🎬</div>
+          <h3 className="text-2xl font-bold text-white mb-2">Loading...</h3>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
+  )
+}
