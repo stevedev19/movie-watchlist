@@ -75,7 +75,7 @@ export default function Header({
             className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           >
             <span className="text-2xl">🎬</span>
-            <h1 className="text-xl font-bold text-white">MyWatchlist</h1>
+            <h1 className="text-xl font-bold text-white">SeenAndSoon</h1>
           </button>
 
           {/* Middle: Search + Filters */}
@@ -228,7 +228,7 @@ export default function Header({
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <span className="text-xl">🎬</span>
-            <h1 className="text-lg font-bold text-white">MyWatchlist</h1>
+            <h1 className="text-lg font-bold text-white">SeenAndSoon</h1>
           </button>
 
           <div className="flex items-center gap-2">

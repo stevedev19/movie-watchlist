@@ -75,7 +75,7 @@ export default function MovieCard({
             alt={movie.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             onError={(e) => {
-              console.error(`❌ [MovieCard] Failed to load image for ${movie.title}`, {
+              console.error(`[MovieCard] Failed to load image for ${movie.title}`, {
                 attemptedUrl: e.currentTarget.src.substring(0, 100),
                 imageUrl: movie.imageUrl?.substring(0, 100),
               })
@@ -107,7 +107,7 @@ export default function MovieCard({
                 onClick={onToggleWatched}
                 className="flex-1 px-3 py-2 bg-white text-black rounded text-sm font-semibold hover:bg-opacity-90 transition-all"
               >
-                {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
+                {movie.watched ? 'Unwatch' : 'Watched'}
               </button>
               {onEditNotes && (
                 <button
@@ -198,7 +198,7 @@ export default function MovieCard({
               onClick={onToggleWatched}
               className="flex-1 px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
             >
-              {movie.watched ? '👁️ Unwatch' : '✅ Watch'}
+              {movie.watched ? 'Unwatch' : 'Watched'}
             </button>
             {onEditNotes && (
               <button

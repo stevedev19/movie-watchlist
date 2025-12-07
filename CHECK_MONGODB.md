@@ -49,3 +49,4 @@ Once logged in, try adding a movie. It should:
 - Appear in `movies-watched` collection if watched
 - Move to `movies-deleted` when deleted
 
+

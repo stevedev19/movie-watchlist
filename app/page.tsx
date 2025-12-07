@@ -74,7 +74,7 @@ export default function Home() {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <span className="text-3xl">🎬</span>
-            <h1 className="text-2xl font-bold text-white">MyWatchlist</h1>
+            <h1 className="text-2xl font-bold text-white">SeenAndSoon</h1>
           </button>
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
@@ -327,10 +327,10 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
               <span className="text-2xl">🎬</span>
-              <span className="text-white font-semibold">MyWatchlist</span>
+              <span className="text-white font-semibold">SeenAndSoon</span>
             </div>
             <p className="text-[#A3A3A3] text-sm">
-              © {new Date().getFullYear()} MyWatchlist. Track your movies, your way.
+              © {new Date().getFullYear()} SeenAndSoon. Track your movies, your way.
             </p>
           </div>
         </div>
