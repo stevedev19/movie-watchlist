@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-[#262626];
+  }
+  
+  body {
+    @apply antialiased bg-[#0F0F0F] text-white;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .netflix-red {
+    background-color: #E50914;
+  }
+  
+  .netflix-red-hover:hover {
+    background-color: #F40612;
+  }
+  
+  .netflix-card {
+    background-color: #181818;
+    border: 1px solid #262626;
+  }
+  
+  .netflix-glow {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  }
+  
+  .movie-card-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .movie-card-hover:hover {
+    transform: scale(1.05);
+    z-index: 10;
+  }
+  
+  .gradient-overlay {
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%);
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.8) 100%);
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
