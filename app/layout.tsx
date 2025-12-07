@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'MyWatchlist - Netflix Style Movie Dashboard',
+  title: 'seenandsoon - Netflix Style Movie Dashboard',
   description: 'Track what you want to watch and what you have finished',
 }
 

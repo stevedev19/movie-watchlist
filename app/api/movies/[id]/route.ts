@@ -114,6 +114,7 @@ export async function PUT(
       )
     }
     const userId = user.userId
+    const userName = user.name || 'Unknown'
 
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json(
@@ -125,11 +126,12 @@ export async function PUT(
     const body = await request.json()
     const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating, watchedAt } = body
 
-    // Find which collection the movie is in (check ownership)
+    // Find which collection the movie is in
     let movieInToWatch = await MovieToWatch.findById(params.id)
     let movieInWatched = await MovieWatched.findById(params.id)
 
     if (!movieInToWatch && !movieInWatched) {
+      console.error(`[PUT /api/movies/${params.id}] Movie not found in any collection. userId: ${userId}`)
       return NextResponse.json(
         { error: 'Movie not found' },
         { status: 404 }
@@ -138,15 +140,20 @@ export async function PUT(
 
     // Check ownership - user can only edit their own movies
     const existingMovie = movieInToWatch || movieInWatched
-    if (existingMovie.userId && existingMovie.userId.toString() !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized: You can only edit your own movies' },
-        { status: 403 }
-      )
+    if (existingMovie.userId) {
+      const movieUserId = existingMovie.userId.toString()
+      if (movieUserId !== userId) {
+        console.error(`[PUT /api/movies/${params.id}] Unauthorized access attempt. Movie userId: ${movieUserId}, Request userId: ${userId}`)
+        return NextResponse.json(
+          { error: 'Unauthorized: You can only edit your own movies' },
+          { status: 403 }
+        )
+      }
     }
 
     // If watched status is changing, move between collections
     if (watched !== undefined) {
+      // Case 1: Mark as watched (move from to-watch to watched)
       if (watched === true && movieInToWatch) {
         // Move from to-watch to watched
         const incomingImageUrl = normalizeImageUrl(imageUrl ?? image)
@@ -203,7 +210,9 @@ export async function PUT(
         }
 
         return NextResponse.json({ movie: movieResult })
-      } else if (watched === false && movieInWatched) {
+      } 
+      // Case 2: Mark as unwatched (move from watched to to-watch)
+      else if (watched === false && movieInWatched) {
         // Move from watched to to-watch
         const incomingImageUrl = normalizeImageUrl(imageUrl ?? image)
         const sourceImageUrl = normalizeImageUrl(movieInWatched.imageUrl) || normalizeImageUrl(movieInWatched.image)
@@ -256,9 +265,12 @@ export async function PUT(
 
         return NextResponse.json({ movie: movieResult })
       }
+      // Case 3: Watched status matches current collection - just update other fields
+      // (e.g., movie is already watched and we're updating watched: true, or already unwatched and updating watched: false)
+      // This can happen if the frontend sends the current watched status
     }
 
-    // Update in place if not changing watched status
+    // Update in place if not changing watched status or if watched status already matches
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
     if (year !== undefined) updateData.year = year

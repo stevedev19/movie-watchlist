@@ -86,3 +86,4 @@ JWT_EXPIRES_IN=7d
 - JWT tokens are automatically sent with each request via cookies
 - The `AuthContext` automatically refreshes user data on mount
 
+
