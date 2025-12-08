@@ -3,6 +3,8 @@ import connectDB from '@/app/lib/mongodb'
 import { ActivityLog } from '@/app/models/ActivityLog'
 import { getUserFromRequestCookie, isAdmin } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/activity - Get all activity logs (admin only)
 export async function GET(request: NextRequest) {
   try {

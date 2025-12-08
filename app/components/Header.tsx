@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Plus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
+import LanguageSwitcher from './LanguageSwitcher'
 import LoginModal from './LoginModal'
 import SignupModal from './SignupModal'
 
@@ -46,6 +49,7 @@ export default function Header({
   onRatingChange,
 }: HeaderProps) {
   const router = useRouter()
+  const { t } = useLanguage()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -85,7 +89,7 @@ export default function Header({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search movies..."
+                placeholder={t.dashboard.searchPlaceholder}
                 className="w-full px-4 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#A3A3A3]">🔍</span>
@@ -96,9 +100,9 @@ export default function Header({
               onChange={(e) => onFilterChange(e.target.value as 'all' | 'unwatched' | 'watched')}
               className="px-3 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E50914] text-sm"
             >
-              <option value="all">All</option>
-              <option value="unwatched">Unwatched</option>
-              <option value="watched">Watched</option>
+              <option value="all">{t.dashboard.filterAll}</option>
+              <option value="unwatched">{t.dashboard.filterUnwatched}</option>
+              <option value="watched">{t.dashboard.filterWatched}</option>
             </select>
 
             <select
@@ -155,14 +159,16 @@ export default function Header({
           {/* Right: Auth */}
           {!hideAuth && (
             <div className="flex-shrink-0 flex items-center gap-3">
+              <LanguageSwitcher />
               {isAuthenticated ? (
                 <>
                   {onAddMovie && (
                     <button
                       onClick={handleAddMovieClick}
-                      className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-all hidden md:block"
+                      className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-all hidden md:flex items-center gap-2"
                     >
-                      ➕ Add Movie
+                      <Plus size={16} />
+                      <span>{t.dashboard.addMovie}</span>
                     </button>
                   )}
                   {isAdmin && (
@@ -174,7 +180,7 @@ export default function Header({
                     </button>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#A3A3A3] hidden lg:block">Welcome,</span>
+                    <span className="text-sm text-[#A3A3A3] hidden lg:block">{t.common.welcome},</span>
                     <span className="text-sm font-semibold text-white flex items-center gap-1">
                       {isAdmin && <span className="text-yellow-400">👑</span>}
                       <span>{user?.name || 'User'}</span>
@@ -195,14 +201,14 @@ export default function Header({
                     className="px-4 py-2 bg-[#181818] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#E50914] transition-colors flex items-center gap-2"
                   >
                     <span>🔐</span>
-                    <span>Login</span>
+                    <span>{t.common.login}</span>
                   </button>
                   <button
                     onClick={() => setShowSignupModal(true)}
                     className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-colors flex items-center gap-2"
                   >
                     <span>✨</span>
-                    <span>Sign Up</span>
+                    <span>{t.common.signup}</span>
                   </button>
                 </>
               )}
@@ -210,12 +216,14 @@ export default function Header({
           )}
           {/* Show Add Movie button even when auth is hidden */}
           {hideAuth && onAddMovie && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center gap-3">
+              <LanguageSwitcher />
               <button
                 onClick={handleAddMovieClick}
-                className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-all"
+                className="px-4 py-2 netflix-red text-white rounded-lg text-sm font-semibold netflix-red-hover transition-all flex items-center gap-2"
               >
-                ➕ Add Movie
+                <Plus size={16} />
+                <span>{t.dashboard.addMovie}</span>
               </button>
             </div>
           )}
@@ -270,14 +278,14 @@ export default function Header({
                       className="px-3 py-1.5 bg-[#181818] border border-[#262626] rounded text-white text-xs font-medium flex items-center gap-1"
                     >
                       <span>🔐</span>
-                      <span>Login</span>
+                      <span>{t.common.login}</span>
                     </button>
                     <button
                       onClick={() => setShowSignupModal(true)}
                       className="px-3 py-1.5 netflix-red text-white rounded text-xs font-semibold flex items-center gap-1"
                     >
                       <span>✨</span>
-                      <span>Sign Up</span>
+                      <span>{t.common.signup}</span>
                     </button>
                   </div>
                 )}

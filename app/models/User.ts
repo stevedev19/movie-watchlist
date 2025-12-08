@@ -1,9 +1,9 @@
 import mongoose, { Schema, Model } from 'mongoose'
 import { User as UserType } from '../types/auth'
 
-export interface UserDocument extends Omit<UserType, 'id'>, mongoose.Document {
+export interface UserDocument extends Omit<UserType, 'id' | 'name'>, mongoose.Document {
   email: string
-  name?: string
+  name: string
   passwordHash: string
   createdAt: string
   _id: mongoose.Types.ObjectId

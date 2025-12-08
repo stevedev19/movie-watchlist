@@ -8,14 +8,19 @@ import AddMovieModal from './components/AddMovieModal'
 import MovieCard from './components/MovieCard'
 import SectionRow from './components/SectionRow'
 import { useState, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { LampContainer } from '@/components/ui/lamp'
+import { motion as framerMotion } from 'framer-motion'
+import { LayoutGroup, motion } from 'motion/react'
+import { TextRotate } from '@/components/ui/text-rotate'
+import { Plus } from 'lucide-react'
+import { useLanguage } from './contexts/LanguageContext'
+import LanguageSwitcher from './components/LanguageSwitcher'
 import { Movie } from '@/types/movie'
 import { loadMovies } from '@/app/lib/storage-mongodb'
 
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated, user, logout, isAdmin } = useAuth()
+  const { t, language } = useLanguage()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
@@ -77,6 +82,7 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-white">SeenAndSoon</h1>
           </button>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             {isAuthenticated ? (
               <>
                 {/* Desktop Navigation */}
@@ -141,99 +147,139 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section with Lamp Effect */}
-      <div className="relative z-10 pt-8 pb-12">
-        <LampContainer className="min-h-[70vh] flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0.5, y: 100 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.3,
-              duration: 0.8,
-              ease: "easeInOut",
-            }}
-            className="text-center w-full"
+      {/* Hero Section - Netflix Style */}
+      <section className="relative z-10 min-h-[85vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+        {/* Spotlight Effect */}
+        <div className="hero-glow absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl pointer-events-none">
+          {/* Horizontal glowing bar */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-white/40 to-transparent blur-sm"></div>
+          {/* Vertical light cone */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-96 bg-gradient-to-b from-white/30 via-white/10 to-transparent"></div>
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
+          <framerMotion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <h2 className="mt-8 bg-gradient-to-br from-slate-300 to-slate-500 py-4 bg-clip-text text-center text-4xl font-medium tracking-tight text-transparent md:text-7xl mb-6">
-              Track Your
-              <br />
-              <span className="bg-gradient-to-br from-[#E50914] to-[#3B82F6] bg-clip-text text-transparent">
-                Movie Journey
-              </span>
-            </h2>
-            <p className="text-xl md:text-2xl text-slate-400 mb-8 leading-relaxed max-w-2xl mx-auto px-4">
-              Never forget a movie you want to watch. Organize your watchlist, 
-              rate what you've seen, and discover your next favorite film.
+            {/* Eyebrow Text */}
+            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-[#A3A3A3] mb-6 font-medium">
+              {t.home.eyebrow}
             </p>
-          </motion.div>
-        </LampContainer>
-      </div>
+
+            {/* Main Title */}
+            <div className="mb-6">
+              <LayoutGroup>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white mb-2">
+                  <span className="text-slate-300">{t.home.title} </span>
+                  <TextRotate
+                    texts={language === 'en' 
+                      ? ["Favorites", "Watchlist", "Movie Journey", "Movies"]
+                      : language === 'uz'
+                      ? ["Sevimlilar", "Ro'yxat", "Film Safari", "Filmlar"]
+                      : ["즐겨찾기", "시청 목록", "영화 여정", "영화"]
+                    }
+                    mainClassName="inline-block font-bold bg-gradient-to-r from-[#E50914] via-[#8B5CF6] to-[#06B6D4] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(229,9,20,0.5)]"
+                    staggerFrom={"last"}
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "-120%" }}
+                    staggerDuration={0.025}
+                    splitLevelClassName="overflow-hidden"
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                    rotationInterval={3000}
+                  />
+                </h1>
+              </LayoutGroup>
+            </div>
+
+            {/* Description */}
+            <p className="text-base sm:text-lg md:text-xl text-[#A3A3A3] max-w-[500px] mx-auto mb-10 leading-relaxed">
+              {t.home.description}
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-8">
+              {isAuthenticated ? (
+                <>
+                  <button
+                    onClick={() => setShowAddMovieModal(true)}
+                    className="group flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 netflix-red text-white rounded-full font-semibold text-sm sm:text-base netflix-red-hover transition-all transform hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#E50914]/30"
+                  >
+                    <Plus size={18} />
+                    <span>{t.home.addNewMovie}</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/dashboard?filter=watched')}
+                    className="group flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-[#181818] border border-[#262626] text-white rounded-full font-medium text-sm sm:text-base hover:border-[#10B981] hover:bg-[#1a1a1a] transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span className="text-base">✅</span>
+                    <span>{t.home.watchedMovies}</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/all-movies')}
+                    className="group flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-transparent border border-[#262626] text-white rounded-full font-medium text-sm sm:text-base hover:border-white/50 hover:bg-white/5 transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span className="text-base">🎬</span>
+                    <span>{t.home.viewAllMovies}</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      alert('Please login first to add a new movie')
+                      setShowLoginModal(true)
+                    }}
+                    className="group flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 netflix-red text-white rounded-full font-semibold text-sm sm:text-base netflix-red-hover transition-all transform hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#E50914]/30"
+                  >
+                    <Plus size={18} />
+                    <span>{t.home.addNewMovie}</span>
+                  </button>
+                  <button
+                    onClick={handleGetStarted}
+                    className="group flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-[#181818] border border-[#262626] text-white rounded-full font-medium text-sm sm:text-base hover:border-[#10B981] hover:bg-[#1a1a1a] transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span className="text-base">✅</span>
+                    <span>{t.home.getStarted}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="group flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-transparent border border-[#262626] text-white rounded-full font-medium text-sm sm:text-base hover:border-white/50 hover:bg-white/5 transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span className="text-base">🎬</span>
+                    <span>{t.home.signIn}</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Stats Strip */}
+            <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full bg-[#181818]/60 border border-[#262626]/50 backdrop-blur-sm text-xs sm:text-sm text-[#A3A3A3]">
+              <span>🎞️ {movies.length} {t.home.statsMoviesSaved}</span>
+              <span className="text-[#262626]">·</span>
+              <span>✅ {movies.filter(m => m.watched).length} {t.home.statsWatched}</span>
+              <span className="text-[#262626]">·</span>
+              <span>🕒 {t.home.statsLastUpdated} {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+          </framerMotion.div>
+        </div>
+      </section>
 
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
         <div className="text-center max-w-4xl mx-auto">
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            {isAuthenticated ? (
-              <>
-                <button
-                  onClick={() => setShowAddMovieModal(true)}
-                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20 flex items-center justify-center gap-2"
-                >
-                  <span>➕</span>
-                  <span>Add New Movie</span>
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard?filter=watched')}
-                  className="px-8 py-4 bg-[#10B981] text-white rounded-lg font-bold text-lg hover:bg-[#059669] transition-all transform hover:scale-105 shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
-                >
-                  <span>✅</span>
-                  <span>Watched Movies</span>
-                </button>
-                <button
-                  onClick={() => router.push('/all-movies')}
-                  className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
-                >
-                  View All Movies
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => {
-                    alert('Please login first to add a new movie')
-                    setShowLoginModal(true)
-                  }}
-                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20 flex items-center justify-center gap-2"
-                >
-                  <span>➕</span>
-                  <span>Add New Movie</span>
-                </button>
-                <button
-                  onClick={handleGetStarted}
-                  className="px-8 py-4 netflix-red text-white rounded-lg font-bold text-lg netflix-red-hover transition-all transform hover:scale-105 shadow-lg shadow-[#E50914]/20"
-                >
-                  Get Started Free
-                </button>
-                <button
-                  onClick={() => setShowLoginModal(true)}
-                  className="px-8 py-4 bg-[#181818] border-2 border-[#262626] text-white rounded-lg font-bold text-lg hover:border-[#E50914] transition-all transform hover:scale-105"
-                >
-                  Sign In
-                </button>
-              </>
-            )}
-          </div>
-
           {/* Recommended Movies Section */}
           {!isLoadingMovies && recommendedMovies.length > 0 && (
             <div className="mt-20 mb-20 w-full">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 text-center">
-                ⭐ Recommended Movies
+                {t.home.recommendedMovies}
               </h2>
               <p className="text-[#A3A3A3] text-center mb-8 max-w-2xl mx-auto">
-                Discover the highest-rated movies from our community. These are the top picks that users have watched and loved.
+                {t.home.recommendedDescription}
               </p>
               <SectionRow title="" horizontal>
                 {recommendedMovies.map(movie => (
@@ -264,10 +310,10 @@ export default function Home() {
           {!isLoadingMovies && recommendedMovies.length === 0 && (
             <div className="mt-20 mb-20 text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                ⭐ Recommended Movies
+                {t.home.recommendedMovies}
               </h2>
               <p className="text-[#A3A3A3]">
-                No highly rated movies yet. Be the first to rate a movie 4+ stars!
+                {t.home.noRecommendedMovies}
               </p>
             </div>
           )}

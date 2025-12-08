@@ -73,4 +73,20 @@
       transform: translateY(0);
     }
   }
+
+  /* Hero Spotlight Glow Animation */
+  @keyframes glowPulse {
+    0%, 100% {
+      opacity: 0.4;
+      transform: translateX(-50%) translateY(0);
+    }
+    50% {
+      opacity: 0.7;
+      transform: translateX(-50%) translateY(-8px);
+    }
+  }
+
+  .hero-glow {
+    animation: glowPulse 6s ease-in-out infinite;
+  }
 }

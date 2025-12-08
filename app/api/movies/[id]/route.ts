@@ -8,6 +8,8 @@ import mongoose from 'mongoose'
 import { getUserFromRequestCookie } from '@/lib/auth'
 import { logActivity } from '@/app/lib/activity-logger'
 
+export const dynamic = 'force-dynamic'
+
 const normalizeImageUrl = (value: unknown): string | null => {
   if (!value || typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -140,6 +142,12 @@ export async function PUT(
 
     // Check ownership - user can only edit their own movies
     const existingMovie = movieInToWatch || movieInWatched
+    if (!existingMovie) {
+      return NextResponse.json(
+        { error: 'Movie not found' },
+        { status: 404 }
+      )
+    }
     if (existingMovie.userId) {
       const movieUserId = existingMovie.userId.toString()
       if (movieUserId !== userId) {

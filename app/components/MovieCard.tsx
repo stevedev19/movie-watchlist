@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Movie } from '@/types/movie'
+import { Trash2, Pencil, Eye, EyeOff } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface MovieCardProps {
   movie: Movie
@@ -22,6 +24,7 @@ export default function MovieCard({
   currentUserId,
   isOwner = false
 }: MovieCardProps) {
+  const { t } = useLanguage()
   const [showActions, setShowActions] = useState(false)
   
   // Debug log - show what we have
@@ -107,21 +110,23 @@ export default function MovieCard({
                 onClick={onToggleWatched}
                 className="flex-1 px-3 py-2 bg-white text-black rounded text-sm font-semibold hover:bg-opacity-90 transition-all"
               >
-                {movie.watched ? 'Unwatch' : 'Watched'}
+                {movie.watched ? t.movieCard.unwatch : t.movieCard.watched}
               </button>
               {onEditNotes && (
                 <button
                   onClick={onEditNotes}
-                  className="px-3 py-2 bg-[#181818] text-white rounded text-sm font-semibold hover:bg-[#262626] transition-all border border-[#262626]"
+                  className="px-3 py-2 bg-[#181818] text-white rounded text-sm font-semibold hover:bg-[#262626] transition-all border border-[#262626] flex items-center justify-center"
+                  title="Edit"
                 >
-                  ✏️
+                  <Pencil size={16} />
                 </button>
               )}
               <button
                 onClick={onDelete}
-                className="px-3 py-2 netflix-red text-white rounded text-sm font-semibold netflix-red-hover transition-all"
+                className="px-3 py-2 netflix-red text-white rounded text-sm font-semibold netflix-red-hover transition-all flex items-center justify-center"
+                title="Delete"
               >
-                🗑️
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
@@ -154,7 +159,7 @@ export default function MovieCard({
         {/* Added date */}
         {movie.createdAt && (
           <div className="text-xs text-[#A3A3A3] mb-2">
-            📅 Added on {formatDate(movie.createdAt)}
+            📅 {t.movieCard.addedOn} {formatDate(movie.createdAt)}
           </div>
         )}
 
@@ -166,7 +171,7 @@ export default function MovieCard({
 
         {movie.watched && movie.watchedAt && (
           <div className="text-xs text-[#A3A3A3] mb-2">
-            Watched on {formatDate(movie.watchedAt)}
+            {t.movieCard.watchedOn} {formatDate(movie.watchedAt)}
           </div>
         )}
 
@@ -180,7 +185,7 @@ export default function MovieCard({
                 className="w-full mt-1 px-2 py-1 bg-[#0F0F0F] border border-[#262626] rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
                 onClick={(e) => e.stopPropagation()}
               >
-                <option value="">Rate this movie</option>
+                <option value="">{t.movieCard.rateMovie}</option>
                 <option value="1">⭐ 1</option>
                 <option value="2">⭐⭐ 2</option>
                 <option value="3">⭐⭐⭐ 3</option>
@@ -198,21 +203,23 @@ export default function MovieCard({
               onClick={onToggleWatched}
               className="flex-1 px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
             >
-              {movie.watched ? 'Unwatch' : 'Watched'}
+              {movie.watched ? t.movieCard.unwatch : t.movieCard.watched}
             </button>
             {onEditNotes && (
               <button
                 onClick={onEditNotes}
-                className="px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all"
+                className="px-2 py-1.5 bg-[#181818] border border-[#262626] text-white rounded text-xs font-semibold hover:bg-[#262626] transition-all flex items-center justify-center"
+                title="Edit"
               >
-                ✏️
+                <Pencil size={14} />
               </button>
             )}
             <button
               onClick={onDelete}
-              className="px-2 py-1.5 netflix-red text-white rounded text-xs font-semibold netflix-red-hover transition-all"
+              className="px-2 py-1.5 netflix-red text-white rounded text-xs font-semibold netflix-red-hover transition-all flex items-center justify-center"
+              title="Delete"
             >
-              🗑️
+              <Trash2 size={14} />
             </button>
           </div>
         )}

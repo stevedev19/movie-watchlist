@@ -171,7 +171,7 @@ export default function AllMoviesPage() {
         {isAuthenticated && toWatchMovies.length > 0 && (
           <SectionRow title="My Movies To Watch" horizontal>
             {toWatchMovies.map(movie => {
-              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              const isOwner = !!(currentUserId && movie.userId && currentUserId === movie.userId)
               return (
                 <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
                   <MovieCard
@@ -210,7 +210,7 @@ export default function AllMoviesPage() {
         {isAuthenticated && watchedMovies.length > 0 && (
           <SectionRow title="My Watched Movies" horizontal>
             {watchedMovies.map(movie => {
-              const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+              const isOwner = !!(currentUserId && movie.userId && currentUserId === movie.userId)
               return (
                 <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
                   <MovieCard
@@ -261,7 +261,7 @@ export default function AllMoviesPage() {
 
             <SectionRow title="All Movies">
               {filteredAndSortedMovies.map(movie => {
-                const isOwner = currentUserId && movie.userId && currentUserId === movie.userId
+                const isOwner = !!(currentUserId && movie.userId && currentUserId === movie.userId)
                 return (
                   <MovieCard
                     key={movie.id}
