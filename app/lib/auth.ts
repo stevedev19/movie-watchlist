@@ -62,8 +62,7 @@ export const signup = (email: string, password: string, name?: string): { succes
     // Auto login after signup
     const user: User = {
       id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
+      name: newUser.name || email.split('@')[0], // Fallback to email username if name is missing
       createdAt: newUser.createdAt,
     }
     setCurrentUser(user)
@@ -89,8 +88,7 @@ export const login = (email: string, password: string): { success: boolean; user
 
     const userData: User = {
       id: user.id,
-      email: user.email,
-      name: user.name,
+      name: user.name || user.email.split('@')[0], // Fallback to email username if name is missing
       createdAt: user.createdAt,
     }
 

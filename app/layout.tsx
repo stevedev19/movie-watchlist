@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from './providers'
+import { LanguageAwareLayout } from './components/LanguageAwareLayout'
 
 export const metadata: Metadata = {
-  title: 'seenandsoon - Netflix Style Movie Dashboard',
+  title: 'SeenAndSoon - Track your movielist',
   description: 'Track what you want to watch and what you have finished',
 }
 
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          {children}
+          <LanguageAwareLayout>
+            {children}
+          </LanguageAwareLayout>
         </Providers>
       </body>
     </html>

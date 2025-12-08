@@ -87,3 +87,4 @@ JWT_EXPIRES_IN=7d
 - The `AuthContext` automatically refreshes user data on mount
 
 
+

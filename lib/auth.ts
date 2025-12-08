@@ -12,7 +12,7 @@ function getJWTSecret() {
 }
 
 export function signToken(payload: { userId: string; name: string; role?: 'admin' | 'user' }) {
-  return jwt.sign(payload, getJWTSecret(), { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, getJWTSecret(), { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 // Optional: get user from cookie on server

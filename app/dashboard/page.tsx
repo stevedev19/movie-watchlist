@@ -5,24 +5,13 @@ import { useSearchParams } from 'next/navigation'
 import { Movie } from '@/types/movie'
 import { loadMovies, addMovie, updateMovie, deleteMovie } from '@/app/lib/storage-mongodb'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
 import Header from '../components/Header'
-import HeroBanner from '../components/HeroBanner'
 import StatCard from '../components/StatCard'
 import MovieCard from '../components/MovieCard'
 import SectionRow from '../components/SectionRow'
 import FiltersBar from '../components/FiltersBar'
 import AddMovieModal from '../components/AddMovieModal'
-
-// Sample trending movie for hero
-const SAMPLE_TRENDING: Movie = {
-  id: 'trending-1',
-  title: 'The Dark Knight',
-  year: 2008,
-  genre: 'Action',
-  notes: 'A thrilling superhero film that redefined the genre. Follow Batman as he faces his greatest challenge yet.',
-  watched: false,
-  createdAt: new Date().toISOString(),
-}
 
 // Sample trending movies
 const SAMPLE_TRENDING_MOVIES: Movie[] = [
@@ -84,6 +73,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
   const { isAuthenticated, user } = useAuth()
+  const { t } = useLanguage()
   const currentUserId = user?.id || undefined
 
   // Handle URL query parameters for filtering
@@ -382,34 +372,70 @@ function DashboardContent() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Banner */}
-        <HeroBanner 
-          movie={SAMPLE_TRENDING}
-          onAddToWatchlist={() => handleAddToWatchlist(SAMPLE_TRENDING)}
-        />
+        {/* Hero Section - Watchlist Style */}
+        <section className="relative mb-12">
+          <div className="text-center py-8 md:py-12">
+            {/* Eyebrow Text */}
+            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-[#A3A3A3] mb-4 font-medium">
+              {filterType === 'watched' 
+                ? `${t.dashboard.watchedMovies.toUpperCase()} · PERSONAL DASHBOARD`
+                : filterType === 'unwatched'
+                ? `${t.dashboard.moviesToWatch.toUpperCase()} · PERSONAL DASHBOARD`
+                : `${t.dashboard.myWatchlist.toUpperCase()} · PERSONAL DASHBOARD`}
+            </p>
+            
+            {/* Main Title */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white mb-4">
+              <span className="text-slate-300">
+                {filterType === 'watched' 
+                  ? t.dashboard.watchedMovies.split(' ').slice(0, -1).join(' ')
+                  : filterType === 'unwatched'
+                  ? t.dashboard.moviesToWatch.split(' ').slice(0, -1).join(' ')
+                  : t.dashboard.title.split(' ').slice(0, -1).join(' ')}
+              </span>
+              {' '}
+              <span className="font-bold bg-gradient-to-r from-[#E50914] via-[#8B5CF6] to-[#06B6D4] bg-clip-text text-transparent">
+                {filterType === 'watched' 
+                  ? t.dashboard.watchedMovies.split(' ').slice(-1)[0]
+                  : filterType === 'unwatched'
+                  ? t.dashboard.moviesToWatch.split(' ').slice(-1)[0]
+                  : t.dashboard.title.split(' ').slice(-1)[0]}
+              </span>
+            </h1>
+            
+            {/* Description */}
+            <p className="text-base sm:text-lg text-[#A3A3A3] max-w-2xl mx-auto mb-6">
+              {filterType === 'watched' 
+                ? t.dashboard.watchedMovies + ' - ' + t.home.description
+                : filterType === 'unwatched'
+                ? t.dashboard.moviesToWatch + ' - ' + t.home.description
+                : t.home.description}
+            </p>
+          </div>
+        </section>
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard 
-            title="Movies Added" 
+            title={t.dashboard.statsTotal} 
             value={stats.total} 
             icon="📽️"
             color="#E50914"
           />
           <StatCard 
-            title="Watched" 
+            title={t.dashboard.statsWatched} 
             value={stats.watched} 
             icon="✅"
             color="#10B981"
           />
           <StatCard 
-            title="To Watch" 
+            title={t.dashboard.statsToWatch} 
             value={stats.toWatch} 
             icon="⏳"
             color="#3B82F6"
           />
           <StatCard 
-            title="Last Updated" 
+            title={t.dashboard.statsLastUpdated} 
             value={stats.lastUpdated} 
             icon="🕐"
             color="#8B5CF6"

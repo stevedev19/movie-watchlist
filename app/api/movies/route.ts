@@ -8,6 +8,8 @@ import { User } from '@/models/User'
 import mongoose from 'mongoose'
 import { logActivity } from '@/app/lib/activity-logger'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/movies - Get all movies for a user (from both collections)
 export async function GET(request: NextRequest) {
   try {

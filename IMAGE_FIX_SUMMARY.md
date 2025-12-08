@@ -104,3 +104,4 @@ The logs will now show:
 All components are now consistent and the image should display correctly!
 
 
+
