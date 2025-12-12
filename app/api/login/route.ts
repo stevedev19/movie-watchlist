@@ -33,10 +33,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const role: 'admin' | 'user' = user.role === 'admin' ? 'admin' : 'user';
+
     const token = signToken({ 
       userId: user._id.toString(), 
       name: user.name,
-      role: (user as Record<string, unknown>).role as 'admin' | 'user' || 'user'
+      role
     });
 
     const res = NextResponse.json(
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
         user: { 
           id: user._id, 
           name: user.name,
-          role: (user as Record<string, unknown>).role as 'admin' | 'user' || 'user'
+          role
         },
       },
       { status: 200 }
