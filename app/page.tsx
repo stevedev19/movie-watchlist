@@ -8,7 +8,6 @@ import AddMovieModal from './components/AddMovieModal'
 import MovieCard from './components/MovieCard'
 import SectionRow from './components/SectionRow'
 import { useState, useEffect, useMemo } from 'react'
-import { motion as framerMotion } from 'framer-motion'
 import { LayoutGroup, motion } from 'motion/react'
 import { TextRotate } from '@/components/ui/text-rotate'
 import { Plus } from 'lucide-react'
@@ -159,7 +158,7 @@ export default function Home() {
 
         {/* Hero Content */}
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
-          <framerMotion.div
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -176,7 +175,7 @@ export default function Home() {
                   <span className="text-slate-300">{t.home.title} </span>
                   <TextRotate
                     texts={language === 'en' 
-                      ? ["Favorites", "Watchlist", "Movie Journey", "Movies"]
+                      ? [ "Seen Movies", "Soon Movies"]
                       : language === 'uz'
                       ? ["Sevimlilar", "Ro'yxat", "Film Safari", "Filmlar"]
                       : ["즐겨찾기", "시청 목록", "영화 여정", "영화"]
@@ -264,7 +263,7 @@ export default function Home() {
               <span className="text-[#262626]">·</span>
               <span>🕒 {t.home.statsLastUpdated} {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
-          </framerMotion.div>
+          </motion.div>
         </div>
       </section>
 

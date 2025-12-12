@@ -11,7 +11,6 @@ interface LoginModalProps {
 
 export default function LoginModal({ onClose, onSwitchToSignup }: LoginModalProps) {
   const [successMessage, setSuccessMessage] = useState('')
-  const { user } = useAuth()
 
   const handleSuccess = (userData: { id: string; name: string }) => {
     setSuccessMessage(`Welcome back, ${userData.name}!`)
@@ -55,7 +54,7 @@ export default function LoginModal({ onClose, onSwitchToSignup }: LoginModalProp
 
         <div className="mt-6 text-center">
           <p className="text-[#A3A3A3] text-sm">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <button
               onClick={onSwitchToSignup}
               className="text-[#E50914] hover:underline font-semibold"

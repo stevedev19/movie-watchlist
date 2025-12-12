@@ -129,8 +129,8 @@ export async function PUT(
     const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating, watchedAt } = body
 
     // Find which collection the movie is in
-    let movieInToWatch = await MovieToWatch.findById(params.id)
-    let movieInWatched = await MovieWatched.findById(params.id)
+    const movieInToWatch = await MovieToWatch.findById(params.id)
+    const movieInWatched = await MovieWatched.findById(params.id)
 
     if (!movieInToWatch && !movieInWatched) {
       console.error(`[PUT /api/movies/${params.id}] Movie not found in any collection. userId: ${userId}`)
@@ -279,7 +279,7 @@ export async function PUT(
     }
 
     // Update in place if not changing watched status or if watched status already matches
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (title !== undefined) updateData.title = title
     if (year !== undefined) updateData.year = year
     if (genre !== undefined) updateData.genre = genre

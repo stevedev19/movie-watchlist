@@ -13,46 +13,6 @@ import SectionRow from '../components/SectionRow'
 import FiltersBar from '../components/FiltersBar'
 import AddMovieModal from '../components/AddMovieModal'
 
-// Sample trending movies
-const SAMPLE_TRENDING_MOVIES: Movie[] = [
-  {
-    id: 'trending-2',
-    title: 'Inception',
-    year: 2010,
-    genre: 'Sci-Fi',
-    notes: 'A mind-bending journey through dreams and reality.',
-    watched: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'trending-3',
-    title: 'Interstellar',
-    year: 2014,
-    genre: 'Sci-Fi',
-    notes: 'An epic space adventure exploring the boundaries of time and space.',
-    watched: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'trending-4',
-    title: 'The Matrix',
-    year: 1999,
-    genre: 'Action',
-    notes: 'A groundbreaking sci-fi action film that changed cinema forever.',
-    watched: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'trending-5',
-    title: 'Pulp Fiction',
-    year: 1994,
-    genre: 'Crime',
-    notes: 'A nonlinear crime film with unforgettable characters and dialogue.',
-    watched: false,
-    createdAt: new Date().toISOString(),
-  },
-]
-
 function DashboardContent() {
   const searchParams = useSearchParams()
   const [movies, setMovies] = useState<Movie[]>([])
@@ -66,7 +26,6 @@ function DashboardContent() {
   const [editGenre, setEditGenre] = useState('')
   const [editYear, setEditYear] = useState('')
   const [editNotes, setEditNotes] = useState('')
-  const [editImageFile, setEditImageFile] = useState<File | null>(null)
   const [editImagePreview, setEditImagePreview] = useState<string>('')
   const [editImageUrl, setEditImageUrl] = useState<string>('')
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -137,7 +96,7 @@ function DashboardContent() {
     // First filter to only show current user's movies
     const userMovies = movies.filter(movie => movie.userId === currentUserId)
     
-    let filtered = userMovies.filter(movie => {
+    const filtered = userMovies.filter(movie => {
       // Search filter
       const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase())
       
@@ -157,7 +116,7 @@ function DashboardContent() {
     })
 
     // Sort
-    filtered.sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'rating':
           return (b.rating || 0) - (a.rating || 0)
@@ -169,7 +128,7 @@ function DashboardContent() {
       }
     })
 
-    return filtered
+    return sorted
   }, [movies, currentUserId, searchQuery, filterType, selectedGenre, selectedYear, sortBy])
 
   const toWatchMovies = filteredAndSortedMovies.filter(m => !m.watched)
@@ -234,24 +193,6 @@ function DashboardContent() {
     }
   }
 
-  const handleAddToWatchlist = async (movie: Movie) => {
-    if (!isAuthenticated) {
-      alert('Please log in to add movies to your watchlist')
-      return
-    }
-    try {
-      const newMovie: Movie = {
-        ...movie,
-        id: Date.now().toString(), // This will be replaced by MongoDB _id
-        createdAt: new Date().toISOString(),
-      }
-      const updated = await addMovie(newMovie)
-      setMovies(updated)
-    } catch (error: any) {
-      console.error('Error adding movie:', error)
-      alert(error.message || 'Failed to add movie. Please try again.')
-    }
-  }
 
   const handleEditNotes = (movie: Movie) => {
     setEditingMovie(movie)
@@ -260,7 +201,6 @@ function DashboardContent() {
     setEditYear(movie.year?.toString() || '')
     setEditNotes(movie.notes || '')
     setEditImageUrl(movie.imageUrl || movie.image || '')
-    setEditImageFile(null)
     setEditImagePreview('')
     console.log('Editing movie:', movie.title, 'Current imageUrl:', movie.imageUrl || movie.image || 'none')
   }
@@ -287,7 +227,6 @@ function DashboardContent() {
     const reader = new FileReader()
     reader.onloadend = () => {
       setEditImagePreview(reader.result as string)
-      setEditImageFile(null) // We don't need the file object anymore
     }
     reader.onerror = () => {
       alert('Failed to read image file')
@@ -296,7 +235,6 @@ function DashboardContent() {
   }
 
   const handleRemoveEditImage = () => {
-    setEditImageFile(null)
     setEditImagePreview('')
     setEditImageUrl('')
   }
@@ -342,7 +280,6 @@ function DashboardContent() {
         setEditGenre('')
         setEditYear('')
         setEditNotes('')
-        setEditImageFile(null)
         setEditImagePreview('')
         setEditImageUrl('')
       } catch (error) {
@@ -563,7 +500,6 @@ function DashboardContent() {
                   setEditGenre('')
                   setEditYear('')
                   setEditNotes('')
-                  setEditImageFile(null)
                   setEditImagePreview('')
                   setEditImageUrl('')
                 }}
@@ -720,7 +656,6 @@ function DashboardContent() {
                     setEditGenre('')
                     setEditYear('')
                     setEditNotes('')
-                    setEditImageFile(null)
                     setEditImagePreview('')
                     setEditImageUrl('')
                   }}

@@ -25,7 +25,7 @@ export default function LanguageSwitcher() {
         aria-label="Change language"
         type="button"
       >
-        <Globe size={16} className="flex-shrink-0" />
+        {language !== 'en' && <Globe size={16} className="flex-shrink-0" />}
         <span className="hidden sm:inline whitespace-nowrap">
           {currentLang.flag} {currentLang.name}
         </span>

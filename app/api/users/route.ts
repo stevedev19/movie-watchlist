@@ -3,7 +3,7 @@ import { connectToDB } from '@/lib/db'
 import { User } from '@/models/User'
 
 // GET /api/users - Get all registered users (for filtering)
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!process.env.MONGODB_URI) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const usersList = users.map(user => ({
       id: user._id.toString(),
       name: user.name || 'Unknown',
-      role: (user as any).role || 'user',
+      role: (user as Record<string, unknown>).role || 'user',
     }))
     
     return NextResponse.json({ users: usersList })

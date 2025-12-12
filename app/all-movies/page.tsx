@@ -58,7 +58,7 @@ export default function AllMoviesPage() {
 
   // Filter and sort movies
   const filteredAndSortedMovies = useMemo(() => {
-    let filtered = movies.filter(movie => {
+    const filtered = movies.filter(movie => {
       // Search filter
       const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase())
       
@@ -82,7 +82,7 @@ export default function AllMoviesPage() {
     })
 
     // Sort
-    filtered.sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'rating':
           return (b.rating || 0) - (a.rating || 0)
@@ -94,7 +94,7 @@ export default function AllMoviesPage() {
       }
     })
 
-    return filtered
+    return sorted
   }, [movies, searchQuery, filterType, selectedGenre, selectedYear, selectedRating, sortBy])
 
   // Only show user's own movies in these sections (private)

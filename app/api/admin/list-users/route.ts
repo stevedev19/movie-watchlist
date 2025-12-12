@@ -3,7 +3,7 @@ import { connectToDB } from '@/lib/db'
 import { User } from '@/models/User'
 
 // GET /api/admin/list-users - List all users (for debugging)
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!process.env.MONGODB_URI) {
       return NextResponse.json(
@@ -20,11 +20,10 @@ export async function GET(request: NextRequest) {
       users: users.map(u => ({
         id: u._id.toString(),
         name: u.name,
-        role: (u as any).role || 'user',
+        role: (u as Record<string, unknown>).role || 'user',
       })),
     })
-  } catch (error) {
-    console.error('Error listing users:', error)
+  } catch {
     return NextResponse.json(
       { error: 'Failed to list users' },
       { status: 500 }

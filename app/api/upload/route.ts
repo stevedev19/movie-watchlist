@@ -12,8 +12,7 @@ export async function POST(request: NextRequest) {
     console.log('📤 [UPLOAD API] Received upload request')
     
     // Check authentication
-    const user = getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
-    console.log('🔐 [UPLOAD API] User:', user ? 'Authenticated' : 'Guest mode')
+    getUserFromRequestCookie() || { userId: 'guest', name: 'Guest' }
 
     const formData = await request.formData()
     const file = formData.get('file') as File

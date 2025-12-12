@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
 
     // Build query
-    const query: any = {}
+    const query: Record<string, unknown> = {}
     if (userId) {
       query.userId = userId
     }

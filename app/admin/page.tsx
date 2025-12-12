@@ -20,7 +20,7 @@ interface ActivityLog {
 
 export default function AdminPage() {
   const router = useRouter()
-  const { isAuthenticated, user, isAdmin } = useAuth()
+  const { isAuthenticated, isAdmin } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([])
   const [isLoading, setIsLoading] = useState(true)

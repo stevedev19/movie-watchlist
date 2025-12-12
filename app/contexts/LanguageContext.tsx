@@ -22,8 +22,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'uz' || savedLanguage === 'ko')) {
           setLanguageState(savedLanguage)
         }
-      } catch (error) {
-        console.error('Error loading language from localStorage:', error)
+      } catch {
+        // Ignore localStorage errors
       }
     }
   }, [])
@@ -35,8 +35,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('language', lang)
-        } catch (error) {
-          console.error('Error saving language to localStorage:', error)
+        } catch {
+          // Ignore localStorage errors
         }
       }
     }
