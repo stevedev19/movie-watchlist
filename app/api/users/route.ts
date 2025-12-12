@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest) {
     const usersList = users.map(user => ({
       id: user._id.toString(),
       name: user.name || 'Unknown',
-      role: (user as Record<string, unknown>).role || 'user',
+      role: user.role === 'admin' ? 'admin' : 'user',
     }))
     
     return NextResponse.json({ users: usersList })
