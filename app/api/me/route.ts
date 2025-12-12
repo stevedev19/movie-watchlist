@@ -5,7 +5,7 @@ import { User } from "@/models/User";
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const user = getUserFromRequestCookie()
 

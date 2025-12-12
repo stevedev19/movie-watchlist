@@ -2,22 +2,6 @@ import { Movie } from '@/types/movie'
 
 const API_BASE = '/api/movies'
 
-// Helper to get user ID from JWT token via /api/me
-// Note: The JWT cookie is automatically sent with fetch requests
-const getUserId = async (): Promise<string | null> => {
-  if (typeof window === 'undefined') return null
-  try {
-    const res = await fetch('/api/me')
-    if (res.ok) {
-      const data = await res.json()
-      return data.user?.id || null
-    }
-  } catch (error) {
-    console.error('Error getting user ID:', error)
-  }
-  return null
-}
-
   export const loadMovies = async (allMovies: boolean = false): Promise<Movie[]> => {
     if (typeof window === 'undefined') return []
 

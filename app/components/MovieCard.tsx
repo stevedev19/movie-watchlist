@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Movie } from '@/types/movie'
-import { Trash2, Pencil, Eye, EyeOff } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 interface MovieCardProps {
@@ -21,7 +21,6 @@ export default function MovieCard({
   onDelete, 
   onUpdateRating,
   onEditNotes,
-  currentUserId,
   isOwner = false
 }: MovieCardProps) {
   const { t } = useLanguage()

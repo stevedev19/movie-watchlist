@@ -11,7 +11,6 @@ interface SignupModalProps {
 
 export default function SignupModal({ onClose, onSwitchToLogin }: SignupModalProps) {
   const [successMessage, setSuccessMessage] = useState('')
-  const { user } = useAuth()
 
   const handleSuccess = (userData: { id: string; name: string }) => {
     setSuccessMessage(`Welcome, ${userData.name}! Account created successfully.`)

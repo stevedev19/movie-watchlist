@@ -109,9 +109,9 @@ export default function AddMovieModal({
       setIsUploading(false)
       setSuccessMessage('Image uploaded successfully!')
       return true
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ [AddMovieModal] Upload error:', err)
-      setError(err.message || 'Failed to upload image')
+      setError(err instanceof Error ? err.message : 'Failed to upload image')
       setIsUploading(false)
       setImageUrl(null)
       setImagePreview(null)
@@ -214,10 +214,9 @@ export default function AddMovieModal({
         onSuccess?.()
         onClose()
       }, 1000)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('❌ [AddMovieModal] Error adding movie:', err)
-      const anyErr = err as { message?: string }
-      setError(anyErr?.message || 'Failed to add movie. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to add movie. Please try again.')
       setSuccessMessage('')
     } finally {
       setIsLoading(false)

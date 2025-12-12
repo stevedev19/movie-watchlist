@@ -46,7 +46,22 @@ export async function GET(request: NextRequest) {
       return trimmed
     }
 
-    const formatMovie = (m: any, watched: boolean): MovieType => {
+    interface MovieDoc {
+      _id: { toString: () => string }
+      title: string
+      year?: number
+      genre?: string
+      imageUrl?: unknown
+      image?: unknown
+      hasImage?: unknown
+      imageType?: string
+      notes?: string
+      rating?: number
+      createdAt: string
+      watchedAt?: string
+      userId?: { toString: () => string }
+    }
+    const formatMovie = (m: MovieDoc, watched: boolean): MovieType => {
       const normalizedImageUrl = normalizeImageUrl(m.imageUrl) || normalizeImageUrl(m.image)
       const normalizedImage = normalizeImageUrl(m.image)
       const hasImage = normalizedImageUrl ? true : m.hasImage !== undefined ? !!m.hasImage : false

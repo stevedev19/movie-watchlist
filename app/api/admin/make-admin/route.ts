@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDB } from '@/lib/db'
 import { User } from '@/models/User'
 import { getUserFromRequestCookie, isAdmin } from '@/lib/auth'
-import mongoose from 'mongoose'
 
 // POST /api/admin/make-admin - Make a user an admin (requires admin privileges)
 export async function POST(request: NextRequest) {

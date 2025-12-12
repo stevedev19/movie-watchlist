@@ -29,7 +29,7 @@ export function getUserFromRequestCookie() {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; name: string; role?: 'admin' | 'user' };
     return decoded;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

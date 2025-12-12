@@ -68,7 +68,7 @@ export const signup = (email: string, password: string, name?: string): { succes
     setCurrentUser(user)
 
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to create account' }
   }
 }
@@ -94,7 +94,7 @@ export const login = (email: string, password: string): { success: boolean; user
 
     setCurrentUser(userData)
     return { success: true, user: userData }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to login' }
   }
 }
@@ -111,8 +111,8 @@ export const getCurrentUser = (): User | null => {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch (error) {
-    console.error('Error getting current user:', error)
+  } catch {
+    // Ignore localStorage errors
   }
   
   return null
@@ -131,8 +131,8 @@ const getStoredUsers = (): StoredUser[] => {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch (error) {
-    console.error('Error getting stored users:', error)
+  } catch {
+    // Ignore localStorage errors
   }
   
   return []
