@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
 
     await connectToDB();
 
-    const user = await User.findOne({ name });
+    // ✅ Case-insensitive name lookup
+    const user = await User.findOne({
+      name: { $regex: `^${name}$`, $options: "i" },
+    });
+
     if (!user) {
       return NextResponse.json(
         { message: "Invalid name or password." },
@@ -33,32 +37,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const role: 'admin' | 'user' = user.role === 'admin' ? 'admin' : 'user';
+    const role: "admin" | "user" =
+      user.role === "admin" ? "admin" : "user";
 
-    const token = signToken({ 
-      userId: user._id.toString(), 
+    const token = signToken({
+      userId: user._id.toString(),
       name: user.name,
-      role
+      role,
     });
 
     const res = NextResponse.json(
       {
         message: "Login successful",
-        user: { 
-          id: user._id, 
+        user: {
+          id: user._id,
           name: user.name,
-          role
+          role,
         },
       },
       { status: 200 }
     );
 
+    // ✅ HTTP VPS cookie (SECURE MUST BE FALSE)
     res.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // 🔥 REQUIRED for http:// VPS
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     return res;
@@ -70,4 +76,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

@@ -24,7 +24,11 @@ export async function POST(req: NextRequest) {
 
     await connectToDB();
 
-    const existing = await User.findOne({ name });
+    // ✅ Case-insensitive duplicate check
+    const existing = await User.findOne({
+      name: { $regex: `^${name}$`, $options: "i" },
+    });
+
     if (existing) {
       return NextResponse.json(
         { message: "This name is already taken." },
@@ -34,9 +38,9 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // Check if this is the first user - make them admin
+    // First user becomes admin
     const userCount = await User.countDocuments();
-    const role = userCount === 0 ? 'admin' : 'user';
+    const role: "admin" | "user" = userCount === 0 ? "admin" : "user";
 
     const user = await User.create({
       name,
@@ -44,31 +48,31 @@ export async function POST(req: NextRequest) {
       role,
     });
 
-    const token = signToken({ 
-      userId: user._id.toString(), 
+    const token = signToken({
+      userId: user._id.toString(),
       name: user.name,
-      role: user.role || 'user'
+      role,
     });
 
     const res = NextResponse.json(
       {
         message: "Signup successful",
-        user: { 
-          id: user._id, 
+        user: {
+          id: user._id,
           name: user.name,
-          role: user.role || 'user'
+          role,
         },
       },
       { status: 201 }
     );
 
-    // Set httpOnly JWT cookie
+    // ✅ HTTP VPS cookie
     res.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // 🔥 REQUIRED for http:// VPS
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return res;
@@ -80,4 +84,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
