@@ -44,8 +44,8 @@
 Add these to your `.env.local` file:
 
 ```env
-MONGODB_URI=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/mywatchlist
-JWT_SECRET=super-secret-long-random-string-change-this-in-production
+MONGODB_URI=mongodb+srv://[username]:[password]@[cluster].mongodb.net/[dbname]?retryWrites=true&w=majority
+JWT_SECRET=your-secret-key-here
 JWT_EXPIRES_IN=7d
 ```
 

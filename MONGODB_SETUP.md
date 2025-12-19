@@ -53,9 +53,9 @@ This guide will help you connect your Movie Watchlist app to MongoDB.
 
 6. Update `.env.local`:
    ```env
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/movie-watchlist?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://[username]:[password]@[cluster].mongodb.net/[dbname]?retryWrites=true&w=majority
    ```
-   Replace `username` and `password` with your database user credentials.
+   Replace `[username]`, `[password]`, `[cluster]`, and `[dbname]` with your actual database credentials.
 
 ## Environment Variables
 

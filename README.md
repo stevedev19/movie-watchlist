@@ -98,7 +98,7 @@ Make sure to set these in your Vercel project settings:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/dbname` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://[username]:[password]@[cluster].mongodb.net/[dbname]` |
 | `NEXT_PUBLIC_APP_URL` | Your Vercel app URL | `https://your-app.vercel.app` |
 | `JWT_SECRET` | Secret key for JWT tokens | Generate a strong random string |
 | `JWT_EXPIRES_IN` | JWT expiration time | `7d` |
