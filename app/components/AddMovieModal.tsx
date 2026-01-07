@@ -170,11 +170,12 @@ export default function AddMovieModal({
 
     try {
       // 🔥 CRITICAL: Log before creating movie
+      const finalImageUrl = imageUrl || imagePreview || null
       console.log('[AddMovieModal] before POST - imageUrl state:', {
-        imageUrl: imageUrl ? imageUrl.substring(0, 80) : 'NULL/UNDEFINED',
-        imageUrlType: typeof imageUrl,
-        imageUrlLength: imageUrl?.length || 0,
-        hasImage: !!imageUrl,
+        imageUrl: finalImageUrl ? finalImageUrl.substring(0, 80) : 'NULL/UNDEFINED',
+        imageUrlType: typeof finalImageUrl,
+        imageUrlLength: finalImageUrl?.length || 0,
+        hasImage: !!finalImageUrl,
       })
 
       const newMovie: Movie = {
@@ -182,9 +183,10 @@ export default function AddMovieModal({
         title: title.trim(),
         genre: genre.trim() || undefined,
         year: year ? parseInt(year, 10) : undefined,
-        imageUrl: imageUrl || null, // 🔥 Uploaded file URL (e.g., /uploads/filename.jpg)
-        hasImage: !!imageUrl,
-        imageType: imageUrl ? 'uploaded' : 'other',
+        imageUrl: finalImageUrl, // Prefer upload URL, fall back to base64 preview
+        image: imagePreview || undefined, // Base64 fallback if uploads are unavailable
+        hasImage: !!finalImageUrl,
+        imageType: finalImageUrl ? 'uploaded' : 'other',
         notes: notes.trim() || undefined,
         watched: false,
         createdAt: new Date().toISOString(),

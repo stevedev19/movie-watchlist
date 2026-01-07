@@ -50,12 +50,12 @@ export default function AdminPage() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/users', { credentials: 'include' })
+      const response = await fetch('/api/users', { credentials: 'include', cache: 'no-store' })
+      const data = await response.json().catch(() => ({}))
       if (response.ok) {
-        const data = await response.json()
         setUsers(data.users || [])
       } else {
-        setError('Failed to fetch users')
+        setError(data.error || 'Failed to fetch users')
       }
     } catch (err) {
       console.error('Error fetching users:', err)

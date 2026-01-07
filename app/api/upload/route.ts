@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ [UPLOAD API] File saved to:', filepath)
 
     // Return the file URL
-    const fileUrl = `/uploads/${filename}`
+    const fileUrl = `/api/uploads/${filename}`
     console.log('🎉 [UPLOAD API] Upload successful! URL:', fileUrl)
 
     return NextResponse.json({

@@ -35,10 +35,28 @@ export default function MovieCard({
 
   // Decide purely based on imageUrl, not hasImage
   // Ignore hasImage completely - just check if imageUrl is a valid string
-  const hasPoster =
+  const normalizePosterUrl = (value: string | null) => {
+    if (!value) return null
+    if (value.startsWith('/uploads/')) {
+      return `/api/uploads/${value.slice('/uploads/'.length)}`
+    }
+    return value
+  }
+  const normalizedImageUrl =
     typeof movie.imageUrl === 'string' &&
     movie.imageUrl.trim() !== '' &&
     movie.imageUrl !== 'none'
+      ? normalizePosterUrl(movie.imageUrl)
+      : null
+  const normalizedFallbackImage =
+    typeof movie.image === 'string' &&
+    movie.image.trim() !== '' &&
+    movie.image !== 'none'
+      ? normalizePosterUrl(movie.image)
+      : null
+  const posterSrc = normalizedImageUrl || normalizedFallbackImage
+  const fallbackSrc = normalizedImageUrl ? normalizedFallbackImage : normalizedImageUrl
+  const hasPoster = !!posterSrc
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -73,14 +91,19 @@ export default function MovieCard({
       <div className="relative aspect-[2/3] overflow-hidden bg-[#181818]">
         {hasPoster ? (
           <img 
-            src={movie.imageUrl as string}
+            src={posterSrc as string}
             alt={movie.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             onError={(e) => {
               console.error(`[MovieCard] Failed to load image for ${movie.title}`, {
                 attemptedUrl: e.currentTarget.src.substring(0, 100),
                 imageUrl: movie.imageUrl?.substring(0, 100),
+                fallbackUrl: movie.image?.substring(0, 100),
               })
+              if (fallbackSrc && e.currentTarget.src !== fallbackSrc) {
+                e.currentTarget.src = fallbackSrc
+                return
+              }
               // Fallback to placeholder
               e.currentTarget.src = `https://picsum.photos/seed/${movie.id}/300/450`
             }}
