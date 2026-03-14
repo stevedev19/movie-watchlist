@@ -13,6 +13,7 @@
     "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
+    "gsap": "^3.14.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.556.0",
     "mongoose": "^8.20.1",
@@ -35,4 +36,3 @@
     "typescript": "^5.2.2"
   }
 }
-

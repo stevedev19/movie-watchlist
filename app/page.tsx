@@ -6,7 +6,7 @@ import LoginModal from './components/LoginModal'
 import SignupModal from './components/SignupModal'
 import AddMovieModal from './components/AddMovieModal'
 import MovieCard from './components/MovieCard'
-import SectionRow from './components/SectionRow'
+import RecommendedMoviesSlider from './components/RecommendedMoviesSlider'
 import { useState, useEffect, useMemo } from 'react'
 import { LayoutGroup, motion } from 'motion/react'
 import { TextRotate } from '@/components/ui/text-rotate'
@@ -271,7 +271,7 @@ export default function Home() {
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
         <div className="text-center max-w-4xl mx-auto">
 
-          {/* Recommended Movies Section */}
+          {/* Recommended Movies Section - Voku-style arc carousel */}
           {!isLoadingMovies && recommendedMovies.length > 0 && (
             <div className="mt-20 mb-20 w-full">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 text-center">
@@ -280,29 +280,13 @@ export default function Home() {
               <p className="text-[#A3A3A3] text-center mb-8 max-w-2xl mx-auto">
                 {t.home.recommendedDescription}
               </p>
-              <SectionRow title="" horizontal>
-                {recommendedMovies.map(movie => (
-                  <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                    <MovieCard
-                      movie={movie}
-                      onToggleWatched={() => {
-                        // Navigate to dashboard if user wants to toggle
-                        router.push('/dashboard')
-                      }}
-                      onDelete={() => {
-                        // Navigate to dashboard if user wants to delete
-                        router.push('/dashboard')
-                      }}
-                      onUpdateRating={(rating) => {
-                        // Navigate to dashboard if user wants to rate
-                        router.push('/dashboard')
-                      }}
-                      currentUserId={user?.id || undefined}
-                      isOwner={!!(user && movie.userId && user.id === movie.userId)}
-                    />
-                  </div>
-                ))}
-              </SectionRow>
+              <RecommendedMoviesSlider
+                movies={recommendedMovies}
+                onToggleWatched={() => router.push('/dashboard')}
+                onDelete={() => router.push('/dashboard')}
+                onUpdateRating={() => router.push('/dashboard')}
+                currentUserId={user?.id || undefined}
+              />
             </div>
           )}
 
