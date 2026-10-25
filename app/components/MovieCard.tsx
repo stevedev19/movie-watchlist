@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Movie } from '@/types/movie'
-import { Trash2, Pencil } from 'lucide-react'
+import { Trash2, Pencil, Star, CalendarDays } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 interface MovieCardProps {
@@ -54,8 +54,10 @@ export default function MovieCard({
     movie.image !== 'none'
       ? normalizePosterUrl(movie.image)
       : null
-  const posterSrc = normalizedImageUrl || normalizedFallbackImage
-  const fallbackSrc = normalizedImageUrl ? normalizedFallbackImage : normalizedImageUrl
+  // TMDB poster is used when the user hasn't uploaded their own image
+  const tmdbPosterSrc = movie.posterPath ? `https://image.tmdb.org/t/p/w342${movie.posterPath}` : null
+  const posterSrc = normalizedImageUrl || normalizedFallbackImage || tmdbPosterSrc
+  const fallbackSrc = (normalizedImageUrl ? normalizedFallbackImage : normalizedImageUrl) || tmdbPosterSrc
   const hasPoster = !!posterSrc
 
   const formatDate = (dateString: string) => {
@@ -72,9 +74,7 @@ export default function MovieCard({
     return (
       <div className="flex items-center gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
-          <span key={i} className={i < rating ? 'text-yellow-400' : 'text-gray-600'}>
-            ⭐
-          </span>
+          <Star key={i} size={14} className={i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'} />
         ))}
         <span className="text-sm text-[#A3A3A3] ml-1">({rating}/5)</span>
       </div>
@@ -180,8 +180,8 @@ export default function MovieCard({
 
         {/* Added date */}
         {movie.createdAt && (
-          <div className="text-xs text-[#A3A3A3] mb-2">
-            📅 {t.movieCard.addedOn} {formatDate(movie.createdAt)}
+          <div className="flex items-center gap-1 text-xs text-[#A3A3A3] mb-2">
+            <CalendarDays size={12} /> {t.movieCard.addedOn} {formatDate(movie.createdAt)}
           </div>
         )}
 
@@ -208,11 +208,11 @@ export default function MovieCard({
                 onClick={(e) => e.stopPropagation()}
               >
                 <option value="">{t.movieCard.rateMovie}</option>
-                <option value="1">⭐ 1</option>
-                <option value="2">⭐⭐ 2</option>
-                <option value="3">⭐⭐⭐ 3</option>
-                <option value="4">⭐⭐⭐⭐ 4</option>
-                <option value="5">⭐⭐⭐⭐⭐ 5</option>
+                <option value="1">★ 1</option>
+                <option value="2">★★ 2</option>
+                <option value="3">★★★ 3</option>
+                <option value="4">★★★★ 4</option>
+                <option value="5">★★★★★ 5</option>
               </select>
             )}
           </div>

@@ -1,26 +1,46 @@
 'use client'
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { MotionConfig, motion } from 'motion/react'
+import { Plus } from 'lucide-react'
 import { Movie } from '@/types/movie'
-import { loadMovies, addMovie, updateMovie, deleteMovie } from '@/app/lib/storage-mongodb'
+import { loadMovies, updateMovie, deleteMovie } from '@/app/lib/storage-mongodb'
 import { useAuth } from '../contexts/AuthContext'
 import { useLanguage } from '../contexts/LanguageContext'
-import Header from '../components/Header'
-import StatCard from '../components/StatCard'
-import MovieCard from '../components/MovieCard'
-import SectionRow from '../components/SectionRow'
-import FiltersBar from '../components/FiltersBar'
 import AddMovieModal from '../components/AddMovieModal'
+import ShelfNav from '../components/shelf/ShelfNav'
+import ShelfTabs, { ShelfTab } from '../components/shelf/ShelfTabs'
+import ShelfFilterBar, { ShelfSort } from '../components/shelf/ShelfFilterBar'
+import PosterTile from '../components/shelf/PosterTile'
+import UpNextCard from '../components/shelf/UpNextCard'
+import RateDialog from '../components/shelf/RateDialog'
+import { fill, formatNumber } from '../components/shelf/shelfUtils'
+import { bodyFont, displayFont, editorialFont } from '../fonts'
+
+const UP_NEXT_COUNT = 4
+
+// ?tab=seen|soon|all; the older ?filter=watched|unwatched links still work
+function tabFromParams(params: URLSearchParams): ShelfTab {
+  const tab = params.get('tab')
+  if (tab === 'seen' || tab === 'soon' || tab === 'all') return tab
+  const filter = params.get('filter')
+  if (filter === 'watched') return 'seen'
+  if (filter === 'unwatched') return 'soon'
+  return 'soon'
+}
 
 function DashboardContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [movies, setMovies] = useState<Movie[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'unwatched' | 'watched'>('all')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
-  const [sortBy, setSortBy] = useState<'rating' | 'date' | 'title'>('date')
+  const [sortBy, setSortBy] = useState<ShelfSort>('date')
+  const [ratingMovie, setRatingMovie] = useState<Movie | null>(null)
+  const [hour, setHour] = useState<number | null>(null)
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editGenre, setEditGenre] = useState('')
@@ -31,19 +51,24 @@ function DashboardContent() {
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMovieModal, setShowAddMovieModal] = useState(false)
-  const { isAuthenticated, user } = useAuth()
-  const { t } = useLanguage()
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth()
+  const { t, language } = useLanguage()
   const currentUserId = user?.id || undefined
 
-  // Handle URL query parameters for filtering
+  // The active tab lives in the URL so it is shareable and survives reloads
+  const tab = tabFromParams(searchParams)
+  const filterType = tab === 'seen' ? 'watched' : tab === 'soon' ? 'unwatched' : 'all'
+  const setTab = (next: ShelfTab) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('filter')
+    params.set('tab', next)
+    router.replace(`/dashboard?${params}`, { scroll: false })
+  }
+
+  // Greeting depends on the visitor's local time, so pick it after mount
   useEffect(() => {
-    const filterParam = searchParams.get('filter')
-    if (filterParam === 'watched') {
-      setFilterType('watched')
-    } else if (filterParam === 'unwatched') {
-      setFilterType('unwatched')
-    }
-  }, [searchParams])
+    setHour(new Date().getHours())
+  }, [])
 
   // Load movies on mount
   useEffect(() => {
@@ -122,6 +147,8 @@ function DashboardContent() {
           return (b.rating || 0) - (a.rating || 0)
         case 'title':
           return a.title.localeCompare(b.title)
+        case 'year':
+          return (b.year || 0) - (a.year || 0)
         case 'date':
         default:
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -131,22 +158,43 @@ function DashboardContent() {
     return sorted
   }, [movies, currentUserId, searchQuery, filterType, selectedGenre, selectedYear, sortBy])
 
-  const toWatchMovies = filteredAndSortedMovies.filter(m => !m.watched)
-  const watchedMovies = filteredAndSortedMovies.filter(m => m.watched)
-
-  // Stats (only for current user's movies - already filtered above)
-  // Stats (only for current user's movies - already filtered above)
+  // Stats (only for current user's movies)
   const stats = useMemo(() => {
     const userMoviesList = movies.filter(m => m.userId === currentUserId)
     const total = userMoviesList.length
     const watched = userMoviesList.filter(m => m.watched).length
     const toWatch = total - watched
-    const lastUpdated = userMoviesList.length > 0 
-      ? new Date(Math.max(...userMoviesList.map(m => new Date(m.createdAt).getTime()))).toLocaleDateString()
-      : 'Never'
+    const ratings = userMoviesList.filter(m => m.watched && m.rating).map(m => m.rating as number)
+    const avgRating = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null
 
-    return { total, watched, toWatch, lastUpdated }
+    return { total, watched, toWatch, avgRating }
   }, [movies, currentUserId])
+
+  const hasFilters = !!(searchQuery || selectedGenre || selectedYear)
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedGenre('')
+    setSelectedYear('')
+  }
+
+  // On the Soon tab the first few movies get the wide "Up next" cards; the grid shows the rest
+  const upNextMovies = tab === 'soon' ? filteredAndSortedMovies.slice(0, UP_NEXT_COUNT) : []
+  const gridMovies = tab === 'soon' ? filteredAndSortedMovies.slice(UP_NEXT_COUNT) : filteredAndSortedMovies
+
+  const greetingTemplate =
+    hour === null
+      ? null
+      : hour >= 5 && hour < 12
+      ? t.shelf.greetingMorning
+      : hour >= 12 && hour < 18
+      ? t.shelf.greetingAfternoon
+      : t.shelf.greetingEvening
+
+  const statsLine = [
+    fill(t.shelf.statsSeen, { n: formatNumber(stats.watched, language) }),
+    fill(t.shelf.statsSoon, { n: formatNumber(stats.toWatch, language) }),
+    stats.avgRating !== null && fill(t.shelf.statsAvg, { x: formatNumber(stats.avgRating, language, 1) }),
+  ].filter(Boolean).join(' · ')
 
   // Handlers
   const handleToggleWatched = async (id: string) => {
@@ -184,13 +232,31 @@ function DashboardContent() {
     }
   }
 
-  const handleUpdateRating = async (id: string, rating: number | undefined) => {
+  // Mark a Soon movie as seen together with its rating in a single update
+  const handleMarkSeen = async (rating: number | undefined) => {
+    if (!ratingMovie) return
     try {
-      const updated = await updateMovie(id, { rating })
+      const updated = await updateMovie(ratingMovie.id, {
+        watched: true,
+        watchedAt: new Date().toISOString(),
+        rating,
+      })
       setMovies(updated)
+      setRatingMovie(null)
     } catch (error) {
-      console.error('Error updating rating:', error)
+      console.error('Error marking movie as seen:', error)
+      alert(error instanceof Error ? error.message : 'Failed to update movie')
     }
+  }
+
+  const closeEditModal = () => {
+    setEditingMovie(null)
+    setEditTitle('')
+    setEditGenre('')
+    setEditYear('')
+    setEditNotes('')
+    setEditImagePreview('')
+    setEditImageUrl('')
   }
 
 
@@ -291,199 +357,135 @@ function DashboardContent() {
     }
   }
 
+  const showSignInPrompt = !isAuthLoading && !isAuthenticated
+
   return (
-    <div className="min-h-screen bg-[#0F0F0F]">
-      <Header
+    <MotionConfig reducedMotion="user">
+    <div className={`${bodyFont.className} min-h-screen bg-[#0e0c0b] text-[#f2ebdd] overflow-x-clip`}>
+      <ShelfNav
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        filterType={filterType}
-        onFilterChange={setFilterType}
-        selectedGenre={selectedGenre}
-        onGenreChange={setSelectedGenre}
-        selectedYear={selectedYear}
-        onYearChange={setSelectedYear}
-        genres={genres}
-        years={years}
         onAddMovie={() => setShowAddMovieModal(true)}
-        hideAuth={true}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section - Watchlist Style */}
-        <section className="relative mb-12">
-          <div className="text-center py-8 md:py-12">
-            {/* Eyebrow Text */}
-            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-[#A3A3A3] mb-4 font-medium">
-              {filterType === 'watched' 
-                ? `${t.dashboard.watchedMovies.toUpperCase()} · PERSONAL DASHBOARD`
-                : filterType === 'unwatched'
-                ? `${t.dashboard.moviesToWatch.toUpperCase()} · PERSONAL DASHBOARD`
-                : `${t.dashboard.myWatchlist.toUpperCase()} · PERSONAL DASHBOARD`}
-            </p>
-            
-            {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white mb-4">
-              <span className="text-slate-300">
-                {filterType === 'watched' 
-                  ? t.dashboard.watchedMovies.split(' ').slice(0, -1).join(' ')
-                  : filterType === 'unwatched'
-                  ? t.dashboard.moviesToWatch.split(' ').slice(0, -1).join(' ')
-                  : t.dashboard.title.split(' ').slice(0, -1).join(' ')}
-              </span>
-              {' '}
-              <span className="font-bold bg-gradient-to-r from-[#E50914] via-[#8B5CF6] to-[#06B6D4] bg-clip-text text-transparent">
-                {filterType === 'watched' 
-                  ? t.dashboard.watchedMovies.split(' ').slice(-1)[0]
-                  : filterType === 'unwatched'
-                  ? t.dashboard.moviesToWatch.split(' ').slice(-1)[0]
-                  : t.dashboard.title.split(' ').slice(-1)[0]}
-              </span>
-            </h1>
-            
-            {/* Description */}
-            <p className="text-base sm:text-lg text-[#A3A3A3] max-w-2xl mx-auto mb-6">
-              {filterType === 'watched' 
-                ? t.dashboard.watchedMovies + ' - ' + t.home.description
-                : filterType === 'unwatched'
-                ? t.dashboard.moviesToWatch + ' - ' + t.home.description
-                : t.home.description}
-            </p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 sm:pt-8">
+        {showSignInPrompt ? (
+          <div className="py-24 text-center">
+            <p className={`${editorialFont.className} text-2xl text-[#f2ebdd]/80`}>{t.shelf.signInPrompt}</p>
+            <Link
+              href="/"
+              className="mt-6 inline-flex items-center rounded-[3px] bg-[#dc2626] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#b91c1c]"
+            >
+              {t.shelf.goHome}
+            </Link>
           </div>
-        </section>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard 
-            title={t.dashboard.statsTotal} 
-            value={stats.total} 
-            icon="📽️"
-            color="#E50914"
-          />
-          <StatCard 
-            title={t.dashboard.statsWatched} 
-            value={stats.watched} 
-            icon="✅"
-            color="#10B981"
-          />
-          <StatCard 
-            title={t.dashboard.statsToWatch} 
-            value={stats.toWatch} 
-            icon="⏳"
-            color="#3B82F6"
-          />
-          <StatCard 
-            title={t.dashboard.statsLastUpdated} 
-            value={stats.lastUpdated} 
-            icon="🕐"
-            color="#8B5CF6"
-          />
-        </div>
-
-        {/* Your Watchlist */}
-        {toWatchMovies.length > 0 && (
-          <SectionRow title="Your Watchlist" horizontal>
-            {toWatchMovies.map(movie => {
-              const isOwner = !!(currentUserId && movie.userId && currentUserId === movie.userId)
-              return (
-                <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                  <MovieCard
-                    movie={movie}
-                    onToggleWatched={() => handleToggleWatched(movie.id)}
-                    onDelete={() => handleDelete(movie.id)}
-                    onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                    onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
-                    currentUserId={currentUserId}
-                    isOwner={isOwner}
-                  />
-                </div>
-              )
-            })}
-          </SectionRow>
-        )}
-
-        {/* Watched Movies */}
-        {watchedMovies.length > 0 && (
-          <SectionRow title="Watched Movies" horizontal>
-            {watchedMovies.map(movie => {
-              const isOwner = true // All movies shown are user's own
-              return (
-                <div key={movie.id} className="flex-shrink-0 w-[150px] md:w-[200px]">
-                  <MovieCard
-                    movie={movie}
-                    onToggleWatched={() => handleToggleWatched(movie.id)}
-                    onDelete={() => handleDelete(movie.id)}
-                    onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                    onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
-                    currentUserId={currentUserId}
-                    isOwner={isOwner}
-                  />
-                </div>
-              )
-            })}
-          </SectionRow>
-        )}
-
-        {/* Full Dashboard Grid with Filters */}
-        {filteredAndSortedMovies.length > 0 && (
+        ) : (
           <>
-            <FiltersBar
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              genres={genres}
-              selectedGenre={selectedGenre}
-              onGenreChange={setSelectedGenre}
-              years={years}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
-            />
+            {/* Header: greeting + one line of stats */}
+            <section className="mb-6">
+              <h1 className={`${displayFont.className} truncate text-3xl uppercase leading-tight sm:text-4xl`}>
+                {greetingTemplate && user ? fill(greetingTemplate, { name: user.name }) : '\u00a0'}
+              </h1>
+              <p className="mt-1 text-sm text-[#f2ebdd]/55">{isLoading ? '\u00a0' : statsLine}</p>
+            </section>
 
-              <SectionRow title="All Movies">
-                {filteredAndSortedMovies.map(movie => {
-                  const isOwner = true // All movies shown are user's own
-                  return (
-                    <MovieCard
-                      key={movie.id}
-                      movie={movie}
-                      onToggleWatched={() => handleToggleWatched(movie.id)}
-                      onDelete={() => handleDelete(movie.id)}
-                      onUpdateRating={(rating) => handleUpdateRating(movie.id, rating)}
-                      onEditNotes={isOwner ? () => handleEditNotes(movie) : undefined}
-                      currentUserId={currentUserId}
-                      isOwner={isOwner}
-                    />
-                  )
-                })}
-              </SectionRow>
+            <ShelfTabs tab={tab} onTabChange={setTab} seenCount={stats.watched} soonCount={stats.toWatch} />
+
+            <div className="mt-4 border-b border-[#f2ebdd]/10 pb-4">
+              <ShelfFilterBar
+                genres={genres}
+                selectedGenre={selectedGenre}
+                onGenreChange={setSelectedGenre}
+                years={years}
+                selectedYear={selectedYear}
+                onYearChange={setSelectedYear}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                hasFilters={hasFilters}
+                onClearFilters={clearFilters}
+              />
+            </div>
+
+            {isLoading ? (
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-6" role="status">
+                <span className="sr-only">{t.shelf.loading}</span>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="aspect-[2/3] rounded-md bg-[#f2ebdd]/5 motion-safe:animate-pulse" />
+                ))}
+              </div>
+            ) : filteredAndSortedMovies.length === 0 ? (
+              /* Empty state for the current tab */
+              <div className="py-20 text-center">
+                <p className={`${editorialFont.className} text-2xl text-[#f2ebdd]/80`}>
+                  {hasFilters ? t.shelf.noMatches : t.shelf.emptyTab}
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMovieModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-[3px] bg-[#dc2626] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#b91c1c]"
+                  >
+                    <Plus size={16} />
+                    {t.dashboard.addMovie}
+                  </button>
+                  {hasFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-sm text-[#f2ebdd]/70 underline-offset-4 hover:text-[#f2ebdd] hover:underline"
+                    >
+                      {t.shelf.clearFilters}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                {/* Up next (Soon tab only) */}
+                {upNextMovies.length > 0 && (
+                  <section className="mt-6" aria-labelledby="up-next-title">
+                    <div className="mb-3 flex items-baseline gap-3">
+                      <h2 id="up-next-title" className="font-mono text-[11px] uppercase tracking-[0.25em] text-[#f2ebdd]/60">
+                        {t.shelf.upNext}
+                      </h2>
+                      <p className={`${editorialFont.className} truncate text-sm text-[#f2ebdd]/50`}>{t.shelf.upNextCaption}</p>
+                    </div>
+                    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+                      {upNextMovies.map(movie => (
+                        <UpNextCard
+                          key={movie.id}
+                          movie={movie}
+                          onOpen={() => handleEditNotes(movie)}
+                          onMarkSeen={() => setRatingMovie(movie)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Poster grid */}
+                {gridMovies.length > 0 && (
+                  <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4 sm:gap-4 lg:grid-cols-6">
+                    {gridMovies.map(movie => (
+                      <PosterTile
+                        key={movie.id}
+                        movie={movie}
+                        onOpen={() => handleEditNotes(movie)}
+                        onMarkSeen={() => setRatingMovie(movie)}
+                        onMarkSoon={() => handleToggleWatched(movie.id)}
+                        onDelete={() => handleDelete(movie.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
           </>
-        )}
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="netflix-card rounded-lg p-12 text-center">
-            <div className="text-6xl mb-4 animate-pulse">🎬</div>
-            <h3 className="text-2xl font-bold text-white mb-2">Loading your movies...</h3>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && filteredAndSortedMovies.length === 0 && movies.length === 0 && (
-          <div className="netflix-card rounded-lg p-12 text-center">
-            <div className="text-6xl mb-4">🎬</div>
-            <h3 className="text-2xl font-bold text-white mb-2">Your watchlist is empty</h3>
-            <p className="text-[#A3A3A3]">
-              {isAuthenticated 
-                ? "Start adding movies to track what you want to watch!" 
-                : "Please log in to start adding movies to your watchlist."}
-            </p>
-          </div>
-        )}
-
-        {filteredAndSortedMovies.length === 0 && movies.length > 0 && (
-          <div className="netflix-card rounded-lg p-12 text-center">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-bold text-white mb-2">No movies found</h3>
-            <p className="text-[#A3A3A3]">Try adjusting your filters or search query.</p>
-          </div>
         )}
       </main>
 
@@ -494,15 +496,8 @@ function DashboardContent() {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Edit Movie</h3>
               <button
-                onClick={() => {
-                  setEditingMovie(null)
-                  setEditTitle('')
-                  setEditGenre('')
-                  setEditYear('')
-                  setEditNotes('')
-                  setEditImagePreview('')
-                  setEditImageUrl('')
-                }}
+                onClick={closeEditModal}
+                aria-label={t.shelf.close}
                 className="text-[#A3A3A3] hover:text-white transition-colors text-2xl"
               >
                 ×
@@ -640,6 +635,33 @@ function DashboardContent() {
                 />
               </div>
 
+              {/* Status and delete (the main way to do this on touch screens) */}
+              <div className="flex flex-wrap gap-2 border-t border-[#262626] pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const movie = editingMovie
+                    closeEditModal()
+                    if (movie.watched) handleToggleWatched(movie.id)
+                    else setRatingMovie(movie)
+                  }}
+                  className="px-4 py-2 bg-[#181818] border border-[#262626] text-white rounded-lg text-sm font-semibold hover:bg-[#262626] transition-all"
+                >
+                  {editingMovie.watched ? t.shelf.markSoon : t.shelf.markSeen}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = editingMovie.id
+                    closeEditModal()
+                    handleDelete(id)
+                  }}
+                  className="px-4 py-2 border border-[#dc2626]/40 text-[#f87171] rounded-lg text-sm font-semibold hover:bg-[#dc2626]/10 transition-all"
+                >
+                  {t.common.delete}
+                </button>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
                 <button
@@ -650,15 +672,7 @@ function DashboardContent() {
                   {isUploadingImage ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
-                  onClick={() => {
-                    setEditingMovie(null)
-                    setEditTitle('')
-                    setEditGenre('')
-                    setEditYear('')
-                    setEditNotes('')
-                    setEditImagePreview('')
-                    setEditImageUrl('')
-                  }}
+                  onClick={closeEditModal}
                   className="flex-1 px-4 py-2 bg-[#181818] border border-[#262626] text-white rounded-lg font-semibold hover:bg-[#262626] transition-all"
                 >
                   Cancel
@@ -667,6 +681,11 @@ function DashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mark as seen + rating */}
+      {ratingMovie && (
+        <RateDialog movie={ratingMovie} onCancel={() => setRatingMovie(null)} onConfirm={handleMarkSeen} />
       )}
 
       {/* Add Movie Modal */}
@@ -682,19 +701,22 @@ function DashboardContent() {
         />
       )}
     </div>
+    </MotionConfig>
+  )
+}
+
+function DashboardFallback() {
+  const { t } = useLanguage()
+  return (
+    <div className="min-h-screen bg-[#0e0c0b] flex items-center justify-center">
+      <p className={`${editorialFont.className} text-xl text-[#f2ebdd]/70`}>{t.shelf.loading}</p>
+    </div>
   )
 }
 
 export default function Dashboard() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-pulse">🎬</div>
-          <h3 className="text-2xl font-bold text-white mb-2">Loading...</h3>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<DashboardFallback />}>
       <DashboardContent />
     </Suspense>
   )

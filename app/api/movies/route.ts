@@ -7,6 +7,7 @@ import { getUserFromRequestCookie } from '@/lib/auth'
 import { User } from '@/models/User'
 import mongoose from 'mongoose'
 import { logActivity } from '@/app/lib/activity-logger'
+import { pickTmdbFields, TmdbMovieFields } from '@/app/models/tmdbFields'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
       return trimmed
     }
 
-    interface MovieDoc {
+    interface MovieDoc extends TmdbMovieFields {
       _id: { toString: () => string }
       title: string
       year?: number
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
         createdAt: m.createdAt,
         watchedAt: m.watchedAt,
         userId: m.userId?.toString(), // Include userId in the response
+        ...pickTmdbFields(m),
       }
     }
 
@@ -187,6 +189,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const tmdb = pickTmdbFields(body)
+
+    // The same user can only add a given TMDB movie once (across both lists)
+    if (tmdb.tmdbId) {
+      const duplicateFilter = { userId, tmdbId: tmdb.tmdbId }
+      const [inToWatch, inWatched] = await Promise.all([
+        MovieToWatch.exists(duplicateFilter),
+        MovieWatched.exists(duplicateFilter),
+      ])
+      if (inToWatch || inWatched) {
+        return NextResponse.json(
+          { error: `"${title}" is already in your list.`, code: 'DUPLICATE_TMDB' },
+          { status: 409 }
+        )
+      }
+    }
+
     const isWatched = watched === true
 
     if (isWatched) {
@@ -205,6 +224,7 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
         watchedAt: new Date().toISOString(),
         userId,
+        ...tmdb,
       })
 
       await movie.save()
@@ -240,6 +260,7 @@ export async function POST(request: NextRequest) {
         watched: true,
         createdAt: movie.createdAt,
         watchedAt: movie.watchedAt,
+        ...pickTmdbFields(movie),
       }
 
       return NextResponse.json({ movie: movieData }, { status: 201 })
@@ -258,6 +279,7 @@ export async function POST(request: NextRequest) {
         imageType: imageType || (imageUrl ? 'uploaded' : 'other'),
         createdAt: new Date().toISOString(),
         userId,
+        ...tmdb,
       }
 
       // 🔥 CRITICAL: Log what we're saving
@@ -307,6 +329,7 @@ export async function POST(request: NextRequest) {
         notes: movie.notes,
         watched: false,
         createdAt: movie.createdAt,
+        ...pickTmdbFields(movie),
       }
 
       console.log('🟢 [API POST] Returning movie data:', {
@@ -318,6 +341,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ movie: movieData }, { status: 201 })
     }
   } catch (error) {
+    // Unique index backstop for concurrent duplicate adds
+    if ((error as { code?: number })?.code === 11000) {
+      return NextResponse.json(
+        { error: 'This movie is already in your list.', code: 'DUPLICATE_TMDB' },
+        { status: 409 }
+      )
+    }
     console.error('Error creating movie:', error)
     return NextResponse.json(
       { error: 'Failed to create movie' },

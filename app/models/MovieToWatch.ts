@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from 'mongoose'
 import { Movie as MovieType } from '@/types/movie'
+import { tmdbSchemaFields, addTmdbUserIndex } from './tmdbFields'
 
 export interface MovieToWatchDocument extends Omit<MovieType, 'id'>, mongoose.Document {
   userId: string
@@ -45,6 +46,7 @@ const MovieToWatchSchema = new Schema<MovieToWatchDocument>(
     watchedAt: {
       type: String,
     },
+    ...tmdbSchemaFields,
     userId: {
       type: String,
       required: true,
@@ -56,6 +58,8 @@ const MovieToWatchSchema = new Schema<MovieToWatchDocument>(
     collection: 'movies-to-watch',
   }
 )
+
+addTmdbUserIndex(MovieToWatchSchema)
 
 const MovieToWatch: Model<MovieToWatchDocument> =
   mongoose.models.MovieToWatch || mongoose.model<MovieToWatchDocument>('MovieToWatch', MovieToWatchSchema, 'movies-to-watch')

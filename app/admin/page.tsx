@@ -1,10 +1,18 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import {
+  ArrowLeft, Check, Clock, Crown, FileText, Lock, LogIn, LucideIcon, Pencil, Plus, RefreshCw, Search, Star, Trash2, UserPlus,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
 import { User } from '../types/auth'
-import Header from '../components/Header'
+import ShelfNav from '../components/shelf/ShelfNav'
+import { stubMask } from '../components/shelf/ShelfTabs'
+import { fill, formatDateTime, formatNumber } from '../components/shelf/shelfUtils'
+import { bodyFont, displayFont, editorialFont } from '../fonts'
 
 interface ActivityLog {
   _id: string
@@ -20,7 +28,8 @@ interface ActivityLog {
 
 export default function AdminPage() {
   const router = useRouter()
-  const { isAuthenticated, isAdmin } = useAuth()
+  const { isAuthenticated, isAdmin, isLoading: isAuthLoading } = useAuth()
+  const { t, language } = useLanguage()
   const [users, setUsers] = useState<User[]>([])
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -33,6 +42,9 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all')
 
   useEffect(() => {
+    // Wait for the session check, or a reload would bounce admins to the home page
+    if (isAuthLoading) return
+
     if (!isAuthenticated) {
       router.push('/')
       return
@@ -45,7 +57,7 @@ export default function AdminPage() {
 
     fetchUsers()
     fetchActivityLogs()
-  }, [isAuthenticated, isAdmin, router])
+  }, [isAuthLoading, isAuthenticated, isAdmin, router])
 
   const fetchUsers = async () => {
     try {
@@ -55,11 +67,11 @@ export default function AdminPage() {
       if (response.ok) {
         setUsers(data.users || [])
       } else {
-        setError(data.error || 'Failed to fetch users')
+        setError(data.error || t.admin.fetchUsersError)
       }
     } catch (err) {
       console.error('Error fetching users:', err)
-      setError('Failed to fetch users')
+      setError(t.admin.fetchUsersError)
     } finally {
       setIsLoading(false)
     }
@@ -105,291 +117,192 @@ export default function AdminPage() {
   const adminUsers = users.filter(u => u.role === 'admin')
   const regularUsers = users.filter(u => u.role !== 'admin' || !u.role)
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'add': return '➕'
-      case 'update': return '✏️'
-      case 'delete': return '🗑️'
-      case 'watch': return '✅'
-      case 'unwatch': return '👁️'
-      case 'rate': return '⭐'
-      case 'login': return '🔐'
-      case 'signup': return '👤'
-      case 'admin_action': return '👑'
-      default: return '📝'
-    }
+  const actionIcons: Record<ActivityLog['action'], LucideIcon> = {
+    add: Plus,
+    update: Pencil,
+    delete: Trash2,
+    watch: Check,
+    unwatch: Clock,
+    rate: Star,
+    login: LogIn,
+    signup: UserPlus,
+    admin_action: Crown,
   }
 
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case 'add': return 'text-green-400'
-      case 'update': return 'text-blue-400'
-      case 'delete': return 'text-red-400'
-      case 'watch': return 'text-green-400'
-      case 'unwatch': return 'text-yellow-400'
-      case 'rate': return 'text-yellow-400'
-      case 'login': return 'text-cyan-400'
-      case 'signup': return 'text-purple-400'
-      case 'admin_action': return 'text-yellow-400'
-      default: return 'text-[#A3A3A3]'
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  const actionTemplates: Record<ActivityLog['action'], string> = {
+    add: t.admin.actAdd,
+    update: t.admin.actUpdate,
+    delete: t.admin.actDelete,
+    watch: t.admin.actWatch,
+    unwatch: t.admin.actUnwatch,
+    rate: t.admin.actRate,
+    login: t.admin.actLogin,
+    signup: t.admin.actSignup,
+    admin_action: t.admin.actAdmin,
   }
 
   const formatActivityDescription = (log: ActivityLog) => {
-    const userName = log.userName
-    const action = log.action
-    const movieTitle = log.movieTitle
+    const template = actionTemplates[log.action]
+    if (!template) return log.details || fill(t.admin.actOther, { user: log.userName, action: log.action })
+    return fill(template, { user: log.userName, title: log.movieTitle || t.admin.aMovie })
+  }
 
-    switch (action) {
-      case 'add':
-        return `${userName} added "${movieTitle || 'a movie'}" to watchlist`
-      case 'update':
-        return `${userName} updated "${movieTitle || 'a movie'}"`
-      case 'delete':
-        return `${userName} deleted "${movieTitle || 'a movie'}"`
-      case 'watch':
-        return `${userName} marked "${movieTitle || 'a movie'}" as watched`
-      case 'unwatch':
-        return `${userName} marked "${movieTitle || 'a movie'}" as unwatched`
-      case 'rate':
-        return `${userName} rated "${movieTitle || 'a movie'}"`
-      case 'login':
-        return `${userName} logged in`
-      case 'signup':
-        return `${userName} signed up`
-      case 'admin_action':
-        return `${userName} performed an admin action`
-      default:
-        return log.details || `${userName} performed ${action}`
-    }
+  if (isAuthLoading) {
+    return <div className="min-h-screen bg-[#0e0c0b]" />
   }
 
   if (!isAuthenticated || !isAdmin) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+      <div className={`${bodyFont.className} min-h-screen bg-[#0e0c0b] flex items-center justify-center px-4`}>
         <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <h3 className="text-2xl font-bold text-white mb-2">Access Denied</h3>
-          <p className="text-[#A3A3A3]">You need admin privileges to access this page.</p>
+          <Lock size={28} className="mx-auto text-[#f2ebdd]/40" />
+          <h1 className={`${displayFont.className} mt-4 text-3xl uppercase text-[#f2ebdd]`}>{t.admin.accessDenied}</h1>
+          <p className={`${editorialFont.className} mt-2 text-lg text-[#f2ebdd]/70`}>{t.admin.accessDeniedMessage}</p>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-[#0F0F0F]">
-      <Header
-        searchQuery=""
-        onSearchChange={() => {}}
-        filterType="all"
-        onFilterChange={() => {}}
-        selectedGenre=""
-        onGenreChange={() => {}}
-        selectedYear=""
-        onYearChange={() => {}}
-        genres={[]}
-        years={[]}
-        hideAuth={true}
-      />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-2">
-              <span>👑</span>
-              <span>Admin Panel</span>
-            </h1>
-            <p className="text-[#A3A3A3] text-sm sm:text-base">
-              Manage users, roles, and monitor activity across your watchlist app.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 px-4 py-2 bg-transparent border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-white/50 hover:bg-white/5 transition-all self-start sm:self-auto"
-          >
-            <span>←</span>
-            <span>Back to Dashboard</span>
-          </button>
-        </div>
+  const panel = 'rounded-md border border-[#f2ebdd]/10 bg-[#151210] overflow-hidden'
+  const tabs = [
+    { key: 'users' as const, label: t.admin.users, count: users.length },
+    { key: 'activity' as const, label: t.admin.activityLogs, count: activityLogs.length },
+  ]
+  const statsLine = [
+    fill(t.admin.statsUsers, { n: formatNumber(users.length, language) }),
+    fill(t.admin.statsAdmins, { n: formatNumber(adminUsers.length, language) }),
+    fill(t.admin.statsRegular, { n: formatNumber(regularUsers.length, language) }),
+  ].join(' · ')
 
-        {/* Stats Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-[#181818] border border-white/5 rounded-lg p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">👥</span>
-              <div>
-                <div className="text-2xl font-bold text-white">{users.length}</div>
-                <div className="text-xs text-[#A3A3A3]">Total Users</div>
-              </div>
-            </div>
-            <div className="text-xs text-[#A3A3A3] mt-2">+0 in last 24h</div>
+  return (
+    <div className={`${bodyFont.className} min-h-screen bg-[#0e0c0b] text-[#f2ebdd] overflow-x-clip`}>
+      <ShelfNav />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 sm:pt-8">
+        {/* Header */}
+        <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className={`${displayFont.className} text-3xl uppercase leading-tight sm:text-4xl`}>{t.admin.title}</h1>
+            <p className="mt-1 text-sm text-[#f2ebdd]/55">{isLoading ? '\u00a0' : statsLine}</p>
           </div>
-          
-          <div className="bg-[#181818] border border-white/5 rounded-lg p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">🛡️</span>
-              <div>
-                <div className="text-2xl font-bold text-yellow-400">{adminUsers.length}</div>
-                <div className="text-xs text-[#A3A3A3]">Admin Users</div>
-              </div>
-            </div>
-            <div className="text-xs text-[#A3A3A3] mt-2">+0 in last 24h</div>
-          </div>
-          
-          <div className="bg-[#181818] border border-white/5 rounded-lg p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">🎟️</span>
-              <div>
-                <div className="text-2xl font-bold text-white">{regularUsers.length}</div>
-                <div className="text-xs text-[#A3A3A3]">Regular Users</div>
-              </div>
-            </div>
-            <div className="text-xs text-[#A3A3A3] mt-2">+0 in last 24h</div>
-          </div>
-        </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 self-start text-sm text-[#f2ebdd]/70 underline-offset-4 transition-colors hover:text-[#f2ebdd] hover:underline sm:self-auto"
+          >
+            <ArrowLeft size={15} />
+            {t.admin.backToDashboard}
+          </Link>
+        </section>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-[#262626] overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-4 py-3 font-semibold text-sm sm:text-base transition-colors whitespace-nowrap ${
-              activeTab === 'users'
-                ? 'text-white border-b-2 border-[#E50914]'
-                : 'text-[#A3A3A3] hover:text-white'
-            }`}
-          >
-            Users
-          </button>
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`px-4 py-3 font-semibold text-sm sm:text-base transition-colors whitespace-nowrap ${
-              activeTab === 'activity'
-                ? 'text-white border-b-2 border-[#E50914]'
-                : 'text-[#A3A3A3] hover:text-white'
-            }`}
-          >
-            Activity Logs
-          </button>
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          {tabs.map(({ key, label, count }) => {
+            const active = activeTab === key
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key)}
+                aria-pressed={active}
+                style={stubMask}
+                className={`flex items-center gap-3 rounded-[3px] px-5 py-2.5 transition-colors sm:px-6 sm:py-3 ${
+                  active ? 'bg-[#f2ebdd] text-[#1a1714]' : 'border border-[#f2ebdd]/30 text-[#f2ebdd] hover:border-[#f2ebdd]/60'
+                }`}
+              >
+                <span className={`${displayFont.className} text-xl uppercase leading-none sm:text-2xl`}>{label}</span>
+                <span className={`border-l border-dashed pl-3 font-mono text-sm ${active ? 'border-[#1a1714]/30' : 'border-[#f2ebdd]/30 text-[#f2ebdd]/70'}`}>
+                  {formatNumber(count, language)}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="bg-[#181818] border border-[#262626] rounded-lg overflow-hidden">
-            {/* Toolbar */}
-            <div className="p-4 sm:p-6 border-b border-[#262626]">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h2 className="text-xl font-bold text-white">All Users</h2>
-                <div className="flex flex-col sm:flex-row gap-3">
+          <div className={panel}>
+            <div className="flex flex-col gap-3 border-b border-[#f2ebdd]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-[#f2ebdd]/60">{t.admin.allUsers}</h2>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative">
+                  <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#f2ebdd]/40" />
                   <input
-                    type="text"
-                    placeholder="Search by name..."
+                    type="search"
+                    placeholder={t.admin.searchByName}
+                    aria-label={t.admin.searchByName}
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="px-3 py-2 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white text-sm placeholder-[#A3A3A3] focus:outline-none focus:border-[#E50914] transition-colors"
+                    className="h-9 w-full rounded-md border border-[#f2ebdd]/15 bg-[#0e0c0b] pl-9 pr-3 text-sm text-[#f2ebdd] placeholder-[#f2ebdd]/40 focus:border-[#f2ebdd]/50 focus:outline-none sm:w-56"
                   />
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'user')}
-                    className="px-3 py-2 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white text-sm focus:outline-none focus:border-[#E50914] transition-colors"
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="admin">Admin</option>
-                    <option value="user">User</option>
-                  </select>
                 </div>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'user')}
+                  aria-label={t.admin.role}
+                  className="h-9 rounded-md border border-[#f2ebdd]/15 bg-[#0e0c0b] px-3 text-sm text-[#f2ebdd] focus:border-[#f2ebdd]/50 focus:outline-none"
+                >
+                  <option value="all">{t.admin.allRoles}</option>
+                  <option value="admin">{t.admin.roleAdmin}</option>
+                  <option value="user">{t.admin.roleUser}</option>
+                </select>
               </div>
             </div>
 
-            {/* Table */}
             {isLoading ? (
-              <div className="p-12 text-center">
-                <div className="text-6xl mb-4 animate-pulse">👑</div>
-                <h3 className="text-xl font-bold text-white mb-2">Loading users...</h3>
-              </div>
+              <p className={`${editorialFont.className} p-12 text-center text-lg text-[#f2ebdd]/70`} role="status">
+                {t.admin.loadingUsers}
+              </p>
             ) : error ? (
-              <div className="p-6">
-                <div className="text-red-400">{error}</div>
-              </div>
+              <p className="p-6 text-sm text-[#f87171]">{error}</p>
             ) : filteredUsers.length === 0 ? (
               <div className="p-12 text-center">
-                <div className="text-4xl mb-4">👥</div>
-                <h3 className="text-lg font-semibold text-white mb-2">No users found</h3>
-                <p className="text-[#A3A3A3] text-sm">
-                  {userSearchQuery || roleFilter !== 'all'
-                    ? 'Try adjusting your search or filter'
-                    : 'No users yet — users will appear here once they sign up.'}
+                <p className={`${editorialFont.className} text-xl text-[#f2ebdd]/80`}>{t.admin.noUsers}</p>
+                <p className="mt-2 text-sm text-[#f2ebdd]/55">
+                  {userSearchQuery || roleFilter !== 'all' ? t.admin.noUsersFiltered : t.admin.noUsersMessage}
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[520px] text-sm">
                   <thead>
-                    <tr className="border-b border-[#262626] bg-[#0F0F0F]/50">
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-white">Name</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-white">Role</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-white">User ID</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-white">Last Login</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-white">Actions</th>
+                    <tr className="border-b border-[#f2ebdd]/10 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-[#f2ebdd]/50">
+                      <th className="px-4 py-3 font-normal">{t.admin.name}</th>
+                      <th className="px-4 py-3 font-normal">{t.admin.role}</th>
+                      <th className="px-4 py-3 font-normal">{t.admin.userId}</th>
+                      <th className="px-4 py-3 font-normal">{t.admin.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.map((u, index) => (
-                      <tr 
-                        key={u.id} 
-                        className={`border-b border-[#262626] transition-colors ${
-                          index % 2 === 0 ? 'bg-[#181818]' : 'bg-[#1a1a1a]'
-                        } hover:bg-[#222222]`}
-                      >
-                        <td className="py-3 px-4 text-sm text-white font-medium">
-                          {u.name}
+                    {filteredUsers.map(u => (
+                      <tr key={u.id} className="border-b border-[#f2ebdd]/5 transition-colors last:border-0 hover:bg-[#f2ebdd]/[0.03]">
+                        <td className="px-4 py-3 font-medium">{u.name}</td>
+                        <td className="px-4 py-3">
+                          {u.role === 'admin' ? (
+                            <span className={`${displayFont.className} rounded-[2px] bg-[#f2ebdd] px-1.5 pb-px pt-0.5 text-[11px] uppercase tracking-[0.08em] text-[#1a1714]`}>
+                              {t.admin.roleAdmin}
+                            </span>
+                          ) : (
+                            <span className={`${displayFont.className} rounded-[2px] border border-[#f2ebdd]/30 px-1.5 pb-px pt-0.5 text-[11px] uppercase tracking-[0.08em] text-[#f2ebdd]/70`}>
+                              {t.admin.roleUser}
+                            </span>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-sm">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
-                            u.role === 'admin' 
-                              ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30' 
-                              : 'bg-[#262626] text-[#A3A3A3] border border-[#262626]'
-                          }`}>
-                            {u.role === 'admin' && <span>👑</span>}
-                            <span className="capitalize">{u.role || 'user'}</span>
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-[#A3A3A3] font-mono text-xs">
-                          {u.id.substring(0, 8)}...
-                        </td>
-                        <td className="py-3 px-4 text-sm text-[#A3A3A3]">
-                          <span className="text-xs">—</span>
-                        </td>
-                        <td className="py-3 px-4 text-sm">
+                        <td className="px-4 py-3 font-mono text-xs text-[#f2ebdd]/50">{u.id.substring(0, 8)}…</td>
+                        <td className="px-4 py-3">
                           <div className="flex gap-2">
                             <button
-                              className="px-2 py-1 text-xs bg-[#0F0F0F] border border-[#262626] rounded text-[#A3A3A3] hover:text-white hover:border-[#E50914] transition-colors"
-                              onClick={() => {
-                                // Placeholder for promote/demote logic
-                                alert('Promote/Demote functionality coming soon')
-                              }}
+                              type="button"
+                              className="rounded-[3px] border border-[#f2ebdd]/20 px-2.5 py-1 text-xs text-[#f2ebdd]/80 transition-colors hover:border-[#f2ebdd]/50 hover:text-[#f2ebdd]"
+                              onClick={() => alert(t.admin.comingSoon)}
                             >
-                              {u.role === 'admin' ? 'Demote' : 'Promote'}
+                              {u.role === 'admin' ? t.admin.demote : t.admin.promote}
                             </button>
                             <button
-                              className="px-2 py-1 text-xs bg-[#0F0F0F] border border-[#262626] rounded text-red-400 hover:border-red-400 transition-colors"
-                              onClick={() => {
-                                // Placeholder for disable logic
-                                alert('Disable functionality coming soon')
-                              }}
+                              type="button"
+                              className="rounded-[3px] border border-[#dc2626]/40 px-2.5 py-1 text-xs text-[#f87171] transition-colors hover:bg-[#dc2626]/10"
+                              onClick={() => alert(t.admin.comingSoon)}
                             >
-                              Disable
+                              {t.admin.disable}
                             </button>
                           </div>
                         </td>
@@ -404,76 +317,60 @@ export default function AdminPage() {
 
         {/* Activity Logs Tab */}
         {activeTab === 'activity' && (
-          <div className="bg-[#181818] border border-[#262626] rounded-lg overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-[#262626] flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Activity Logs</h2>
+          <div className={panel}>
+            <div className="flex items-center justify-between border-b border-[#f2ebdd]/10 p-4">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-[#f2ebdd]/60">{t.admin.activityLogs}</h2>
               <button
+                type="button"
                 onClick={fetchActivityLogs}
-                className="px-3 py-1.5 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white text-sm font-medium hover:border-[#E50914] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#f2ebdd]/15 px-3 py-1.5 text-sm text-[#f2ebdd]/80 transition-colors hover:border-[#f2ebdd]/50 hover:text-[#f2ebdd]"
               >
-                🔄 Refresh
+                <RefreshCw size={14} className={isLoadingLogs ? 'motion-safe:animate-spin' : ''} />
+                {t.common.refresh}
               </button>
             </div>
 
             {isLoadingLogs ? (
-              <div className="p-12 text-center">
-                <div className="text-6xl mb-4 animate-pulse">📊</div>
-                <h3 className="text-xl font-bold text-white mb-2">Loading activity logs...</h3>
-              </div>
+              <p className={`${editorialFont.className} p-12 text-center text-lg text-[#f2ebdd]/70`} role="status">
+                {t.admin.loadingActivity}
+              </p>
             ) : activityLogs.length === 0 ? (
               <div className="p-12 text-center">
-                <div className="text-4xl mb-4">📝</div>
-                <h3 className="text-lg font-semibold text-white mb-2">No activity yet</h3>
-                <p className="text-[#A3A3A3] text-sm">
-                  User actions will appear here.
-                </p>
+                <p className={`${editorialFont.className} text-xl text-[#f2ebdd]/80`}>{t.admin.noActivity}</p>
+                <p className="mt-2 text-sm text-[#f2ebdd]/55">{t.admin.noActivityMessage}</p>
               </div>
             ) : (
-              <div className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  {activityLogs.map((log, index) => (
-                    <div
-                      key={log._id}
-                      className="flex gap-4 pb-4 border-b border-[#262626] last:border-0 last:pb-0"
-                    >
-                      {/* Timeline indicator */}
-                      <div className="flex flex-col items-center">
-                        <div className={`w-2 h-2 rounded-full ${getActionColor(log.action).replace('text-', 'bg-')} opacity-60`}></div>
-                        {index < activityLogs.length - 1 && (
-                          <div className="w-px h-full bg-[#262626] mt-2"></div>
-                        )}
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-semibold ${getActionColor(log.action)}`}>
-                              {getActionIcon(log.action)}
-                            </span>
-                            <span className="text-sm text-white font-medium">{log.userName}</span>
-                          </div>
-                          <span className="text-xs text-[#A3A3A3] font-mono">
-                            {formatDate(log.timestamp)}
-                          </span>
+              <ol className="divide-y divide-[#f2ebdd]/5">
+                {activityLogs.map(log => {
+                  const Icon = actionIcons[log.action] || FileText
+                  return (
+                    <li key={log._id} className="flex gap-3 px-4 py-3.5">
+                      <span
+                        className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full border ${
+                          log.action === 'delete' ? 'border-[#dc2626]/40 text-[#f87171]' : 'border-[#f2ebdd]/15 text-[#f2ebdd]/70'
+                        }`}
+                      >
+                        <Icon size={14} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                          <p className="min-w-0 text-sm text-[#f2ebdd]">{formatActivityDescription(log)}</p>
+                          <time dateTime={log.timestamp} className="shrink-0 font-mono text-[11px] text-[#f2ebdd]/45">
+                            {formatDateTime(log.timestamp, language)}
+                          </time>
                         </div>
-                        <p className="text-sm text-[#A3A3A3]">
-                          {formatActivityDescription(log)}
-                        </p>
                         {log.details && (
-                          <p className="text-xs text-[#666] mt-1 italic">
-                            {log.details}
-                          </p>
+                          <p className={`${editorialFont.className} mt-0.5 text-xs text-[#f2ebdd]/50`}>{log.details}</p>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    </li>
+                  )
+                })}
+              </ol>
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

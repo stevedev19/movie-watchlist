@@ -110,8 +110,10 @@ export default function RecommendedMoviesSlider({
   }, [slideCount])
 
   const animate = useCallback(() => {
+    // Reduced motion: follow the wheel/touch directly instead of easing toward it
+    const lerp = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : SCROLL_LERP
     scrollCurrent.current +=
-      (scrollTarget.current - scrollCurrent.current) * SCROLL_LERP
+      (scrollTarget.current - scrollCurrent.current) * lerp
     layoutSlides()
     rafId.current = requestAnimationFrame(animate)
   }, [layoutSlides])

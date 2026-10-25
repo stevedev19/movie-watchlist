@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
-import { Globe } from 'lucide-react'
+import { Check, Globe } from 'lucide-react'
 import { Language } from '@/app/lib/translations'
 
-const languages: { code: Language; name: string; flag: string }[] = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'uz', name: 'O\'zbekcha', flag: '🇺🇿' },
-  { code: 'ko', name: '한국어', flag: '🇰🇷' },
+const languages: { code: Language; name: string }[] = [
+  { code: 'en', name: 'English' },
+  { code: 'uz', name: 'O\'zbekcha' },
+  { code: 'ko', name: '한국어' },
 ]
 
 export default function LanguageSwitcher() {
@@ -25,13 +25,8 @@ export default function LanguageSwitcher() {
         aria-label="Change language"
         type="button"
       >
-        {language !== 'en' && <Globe size={16} className="flex-shrink-0" />}
-        <span className="hidden sm:inline whitespace-nowrap">
-          {currentLang.flag} {currentLang.name}
-        </span>
-        <span className="sm:hidden">
-          {currentLang.flag}
-        </span>
+        <Globe size={16} className="flex-shrink-0" />
+        <span className="uppercase tracking-wide">{currentLang.code}</span>
       </button>
 
       {isOpen && (
@@ -58,10 +53,10 @@ export default function LanguageSwitcher() {
                 }`}
                 type="button"
               >
-                <span className="text-base">{lang.flag}</span>
+                <span className="w-6 text-xs font-semibold uppercase tracking-wide opacity-70">{lang.code}</span>
                 <span className="flex-1">{lang.name}</span>
                 {language === lang.code && (
-                  <span className="ml-auto text-sm">✓</span>
+                  <Check size={14} className="ml-auto" />
                 )}
               </button>
             ))}

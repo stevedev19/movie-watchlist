@@ -74,7 +74,8 @@ export const addMovie = async (movie: Movie): Promise<Movie[]> => {
         throw new Error('Please log in to add movies')
       }
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || 'Failed to add movie')
+      // Keep the API error code (e.g. DUPLICATE_TMDB) so the UI can show a translated message
+      throw Object.assign(new Error(errorData.error || 'Failed to add movie'), { code: errorData.code })
     }
 
     const data = await response.json()

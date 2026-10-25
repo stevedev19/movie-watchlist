@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from 'mongoose'
 import { Movie as MovieType } from '@/types/movie'
+import { tmdbSchemaFields } from './tmdbFields'
 
 export interface MovieDocument extends Omit<MovieType, 'id'>, mongoose.Document {
   userId: string
@@ -38,6 +39,7 @@ const MovieSchema = new Schema<MovieDocument>(
     watchedAt: {
       type: String,
     },
+    ...tmdbSchemaFields,
     userId: {
       type: String,
       required: true,

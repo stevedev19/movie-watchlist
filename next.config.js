@@ -4,6 +4,9 @@ const nextConfig = {
   // Enable image optimization
   images: {
     domains: ['picsum.photos'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'image.tmdb.org', pathname: '/t/p/**' },
+    ],
     unoptimized: false,
   },
   // Ensure API routes work properly

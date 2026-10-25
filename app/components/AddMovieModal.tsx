@@ -9,7 +9,13 @@ import React, {
 } from 'react'
 import { Movie } from '@/types/movie'
 import { addMovie } from '@/app/lib/storage-mongodb'
+import type { TmdbMovieDetails, TmdbSearchResult } from '@/app/lib/tmdb'
+import { Film, Loader2, Star, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
+import TmdbTitleCombobox from './TmdbTitleCombobox'
+
+const TMDB_PREVIEW = 'https://image.tmdb.org/t/p/w185'
 
 interface AddMovieModalProps {
   onClose: () => void
@@ -30,8 +36,69 @@ export default function AddMovieModal({
   const [isLoading, setIsLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [watched, setWatched] = useState(false)
+  const [rating, setRating] = useState<number | undefined>(undefined)
+  const [tmdbMovie, setTmdbMovie] = useState<TmdbMovieDetails | null>(null)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [detailsError, setDetailsError] = useState('')
   const { isAuthenticated } = useAuth()
+  const { t, language } = useLanguage()
   const inputRef = useRef<HTMLInputElement>(null)
+  const detailsRequestRef = useRef(0)
+
+  // Fill the form from a TMDB search result, then upgrade it with full details
+  const handleTmdbSelect = async (result: TmdbSearchResult) => {
+    const requestId = ++detailsRequestRef.current
+    setTitle(result.title)
+    setYear(result.year ? String(result.year) : '')
+    setTmdbMovie(null)
+    setDetailsError('')
+    setIsLoadingDetails(true)
+
+    try {
+      const response = await fetch(`/api/tmdb/movie/${result.id}?lang=${language}`)
+      if (!response.ok) throw new Error(`Details failed: ${response.status}`)
+      const data: { movie: TmdbMovieDetails } = await response.json()
+      if (requestId !== detailsRequestRef.current) return
+      setTmdbMovie(data.movie)
+      if (data.movie.year) setYear(String(data.movie.year))
+      if (data.movie.genres.length) setGenre(data.movie.genres.join(', '))
+    } catch (err) {
+      if (requestId !== detailsRequestRef.current) return
+      console.error('[AddMovieModal] TMDB details error:', err)
+      // Keep what the search result already gave us
+      setTmdbMovie({
+        tmdbId: result.id,
+        title: result.title,
+        year: result.year,
+        runtime: null,
+        genres: [],
+        overview: result.overview,
+        posterPath: result.posterPath,
+        backdropPath: null,
+        director: null,
+        cast: [],
+      })
+      setDetailsError(t.addMovie.detailsError)
+    } finally {
+      if (requestId === detailsRequestRef.current) setIsLoadingDetails(false)
+    }
+  }
+
+  const clearTmdbSelection = () => {
+    detailsRequestRef.current++
+    setTmdbMovie(null)
+    setIsLoadingDetails(false)
+    setDetailsError('')
+  }
+
+  const formatRuntime = (minutes: number) => {
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    return h > 0
+      ? t.addMovie.runtime.replace('{h}', String(h)).replace('{m}', String(m))
+      : t.addMovie.runtimeMinutes.replace('{m}', String(m))
+  }
 
   // Upload images function (similar to the example)
   const uploadImages = async () => {
@@ -188,8 +255,19 @@ export default function AddMovieModal({
         hasImage: !!finalImageUrl,
         imageType: finalImageUrl ? 'uploaded' : 'other',
         notes: notes.trim() || undefined,
-        watched: false,
+        watched,
+        rating: watched ? rating : undefined,
         createdAt: new Date().toISOString(),
+        ...(tmdbMovie && {
+          tmdbId: tmdbMovie.tmdbId,
+          runtime: tmdbMovie.runtime ?? undefined,
+          genres: tmdbMovie.genres,
+          overview: tmdbMovie.overview || undefined,
+          posterPath: tmdbMovie.posterPath ?? undefined,
+          backdropPath: tmdbMovie.backdropPath ?? undefined,
+          director: tmdbMovie.director ?? undefined,
+          cast: tmdbMovie.cast,
+        }),
       }
 
       // 🔥 CRITICAL: Log the movie object being created
@@ -218,7 +296,11 @@ export default function AddMovieModal({
       }, 1000)
     } catch (err: unknown) {
       console.error('❌ [AddMovieModal] Error adding movie:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add movie. Please try again.')
+      if ((err as { code?: string })?.code === 'DUPLICATE_TMDB') {
+        setError(t.addMovie.duplicate)
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to add movie. Please try again.')
+      }
       setSuccessMessage('')
     } finally {
       setIsLoading(false)
@@ -260,16 +342,70 @@ export default function AddMovieModal({
             >
               Movie Name <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <TmdbTitleCombobox
               id="movie-title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
-              placeholder="Enter movie name"
-              required
+              onChange={setTitle}
+              onSelect={handleTmdbSelect}
+              className="w-full pl-10 pr-10 py-3 bg-[#0F0F0F] border border-[#262626] rounded-lg text-white placeholder-[#737373] focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all"
             />
           </div>
+
+          {/* TMDB preview */}
+          {isLoadingDetails && (
+            <div className="flex items-center gap-3 rounded-lg border border-[#262626] bg-[#0F0F0F] p-3 text-sm text-[#A3A3A3]" role="status">
+              <Loader2 size={16} className="animate-spin" />
+              {t.addMovie.loadingDetails}
+            </div>
+          )}
+          {tmdbMovie && !isLoadingDetails && (
+            <div className="flex gap-3 rounded-lg border border-[#262626] bg-[#0F0F0F] p-3">
+              {tmdbMovie.posterPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`${TMDB_PREVIEW}${tmdbMovie.posterPath}`}
+                  alt=""
+                  className="h-[108px] w-[72px] flex-none rounded bg-[#262626] object-cover"
+                />
+              ) : (
+                <div className="flex h-[108px] w-[72px] flex-none items-center justify-center rounded bg-[#262626]">
+                  <Film size={20} className="text-[#737373]" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold leading-tight text-white">{tmdbMovie.title}</p>
+                  <button
+                    type="button"
+                    onClick={clearTmdbSelection}
+                    className="-mr-1 -mt-1 rounded p-1 text-[#A3A3A3] transition-colors hover:bg-[#262626] hover:text-white"
+                    aria-label={t.addMovie.clearSelection}
+                    title={t.addMovie.clearSelection}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-[#A3A3A3]">
+                  {[tmdbMovie.year, tmdbMovie.runtime && formatRuntime(tmdbMovie.runtime)].filter(Boolean).join(' · ')}
+                </p>
+                {tmdbMovie.genres.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {tmdbMovie.genres.map((g) => (
+                      <span key={g} className="rounded bg-[#262626] px-1.5 py-0.5 text-[11px] text-[#D4D4D4]">
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {tmdbMovie.director && (
+                  <p className="mt-2 truncate text-xs text-[#A3A3A3]">
+                    {t.addMovie.directedBy} {tmdbMovie.director}
+                  </p>
+                )}
+                {detailsError && <p className="mt-2 text-xs text-yellow-500">{detailsError}</p>}
+              </div>
+            </div>
+          )}
 
           {/* Genre */}
           <div>
@@ -317,6 +453,9 @@ export default function AddMovieModal({
             >
               Movie Image
             </label>
+            {tmdbMovie?.posterPath && !imageUrl && !imagePreview && (
+              <p className="mb-2 text-xs text-[#A3A3A3]">{t.addMovie.posterFromTmdb}</p>
+            )}
 
             {!imageUrl && !imagePreview ? (
               <div>
@@ -398,6 +537,43 @@ export default function AddMovieModal({
                     📸 Image selected (will upload on save)
                   </p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Watched + rating */}
+          <div className="space-y-3">
+            <label className="flex cursor-pointer select-none items-center gap-3">
+              <input
+                type="checkbox"
+                checked={watched}
+                onChange={(e) => setWatched(e.target.checked)}
+                className="h-4 w-4 accent-[#E50914]"
+              />
+              <span className="text-sm text-white">{t.addMovie.alreadyWatched}</span>
+            </label>
+            {watched && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[#A3A3A3]">{t.addMovie.yourRating}</span>
+                <div className="flex gap-1" role="radiogroup" aria-label={t.addMovie.yourRating}>
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={rating === value}
+                      aria-label={`${value}/5`}
+                      // Clicking the current rating clears it
+                      onClick={() => setRating(rating === value ? undefined : value)}
+                      className="rounded p-0.5 transition-transform hover:scale-110"
+                    >
+                      <Star
+                        size={20}
+                        className={rating && value <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-[#525252]'}
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

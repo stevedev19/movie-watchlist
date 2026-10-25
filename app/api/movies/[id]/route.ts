@@ -7,6 +7,7 @@ import { Movie as MovieType } from '@/types/movie'
 import mongoose from 'mongoose'
 import { getUserFromRequestCookie } from '@/lib/auth'
 import { logActivity } from '@/app/lib/activity-logger'
+import { pickTmdbFields } from '@/app/models/tmdbFields'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,6 +81,7 @@ export async function GET(
       watched: isWatched,
       createdAt: movie.createdAt,
       watchedAt: movie.watchedAt,
+      ...pickTmdbFields(movie),
     }
 
     return NextResponse.json({ movie: movieData })
@@ -185,6 +187,7 @@ export async function PUT(
           createdAt: movieInToWatch.createdAt,
           watchedAt: watchedAt || new Date().toISOString(),
           userId,
+          ...pickTmdbFields(movieInToWatch),
         }
 
         const newMovie = new MovieWatched(movieData)
@@ -215,6 +218,7 @@ export async function PUT(
           watched: true,
           createdAt: newMovie.createdAt,
           watchedAt: newMovie.watchedAt,
+          ...pickTmdbFields(newMovie),
         }
 
         return NextResponse.json({ movie: movieResult })
@@ -241,6 +245,7 @@ export async function PUT(
           watched: false,
           createdAt: movieInWatched.createdAt,
           userId,
+          ...pickTmdbFields(movieInWatched),
         }
 
         const newMovie = new MovieToWatch(movieData)
@@ -269,6 +274,7 @@ export async function PUT(
           notes: newMovie.notes,
           watched: false,
           createdAt: newMovie.createdAt,
+          ...pickTmdbFields(newMovie),
         }
 
         return NextResponse.json({ movie: movieResult })
@@ -359,6 +365,7 @@ export async function PUT(
       watched: !!movieInWatched,
       createdAt: updatedMovie.createdAt,
       watchedAt: updatedMovie.watchedAt,
+      ...pickTmdbFields(updatedMovie),
     }
 
     return NextResponse.json({ movie: movieData })
@@ -441,6 +448,7 @@ export async function DELETE(
       watchedAt: movie.watchedAt,
       deletedAt: new Date().toISOString(),
       userId,
+      ...pickTmdbFields(movie),
     })
 
     await deletedMovie.save()
