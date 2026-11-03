@@ -66,6 +66,19 @@ npm run dev
 
 ## Deployment on Vercel
 
+### Ask your watchlist
+
+Set `GEMINI_API_KEY` in `.env.local` (and your hosting environment). The key stays on the server.
+New movies require this key to create their embeddings before saving. Adding or editing embedding metadata fails without saving if the embedding service is unavailable.
+
+Run `npm run backfill:embeddings` once for existing movies. The script loads Next.js development environment files, processes both Soon and Seen collections, and **regenerates every embedding on every run**, including current Gemini embeddings. It makes Gemini API calls that may incur charges and writes embeddings to the configured MongoDB database.
+
+The dashboard's **Ask your watchlist** box searches only the signed-in user's Soon movies. `POST /api/ask` accepts `{ "question": "Something short and funny tonight?" }` and returns `{ "status": "match", "movie": { "id": "...", "title": "...", "year": 2020, "imageUrl": "..." }, "reason": "...", "remaining": 9, "resetsAt": 0 }` (with the actual quota reset timestamp in milliseconds). The chosen ID must belong to the retrieved Soon candidates; unknown IDs or no match return `status: "no_match"`, a null movie, and a fixed friendly message without model text. Titles and posters come from the database. `GET /api/ask` reads the remaining hourly quota without consuming it. It ranks movies by cosine similarity in code and supplies at most five movies, including stored runtimes, to the LLM. Missing, invalid, or stale model embeddings return a preparation error until backfilled; an empty Soon list returns `status: "empty"`. Open `/dashboard#ask` for the section; the Add Movie link opens the existing dialog and Mark as seen opens the existing rating flow.
+
+Provider code lives in `lib/watchlist-provider.js`, using `gemini-embedding-001` (768 dimensions, document/query retrieval tasks) and `gemini-3.5-flash-lite` through server-side HTTP requests. See Google's [embeddings](https://ai.google.dev/gemini-api/docs/embeddings) and [structured output](https://ai.google.dev/gemini-api/docs/structured-output) documentation. Each movie stores `embeddingModel`, and old OpenAI embeddings are incompatible: run the backfill before using recommendations after switching providers.
+
+`/api/ask` allows 10 valid question attempts per user per fixed UTC clock hour. MongoDB stores atomic counters in `ask-rate-limits`, shared across server instances; failed provider calls also count. Limit responses return HTTP 429 and a `Retry-After` header. Gemini 429 responses display “Please try again in a minute.” The existing UI displays these server messages. No vector database or additional framework is required.
+
 ### Prerequisites
 
 - Vercel account

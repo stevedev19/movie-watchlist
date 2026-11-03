@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from './contexts/AuthContext'
 import LoginModal from './components/LoginModal'
@@ -184,6 +185,9 @@ export default function Home() {
                 {ctaLabel}
                 <ArrowRight size={16} />
               </button>
+              <Link href="/dashboard#ask" className="inline-flex items-center gap-2 rounded-[3px] border border-[#f2ebdd]/25 px-5 py-3.5 text-sm font-semibold text-[#f2ebdd] transition-colors hover:bg-[#f2ebdd]/5">
+                Ask your watchlist
+              </Link>
               <a
                 href="#how-it-works"
                 onClick={scrollToHowItWorks}

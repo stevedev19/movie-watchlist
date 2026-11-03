@@ -9,6 +9,8 @@ import mongoose from 'mongoose'
 import { logActivity } from '@/app/lib/activity-logger'
 import { pickTmdbFields, TmdbMovieFields } from '@/app/models/tmdbFields'
 
+import { embedMovie, isProviderConfigured, isProviderRateLimit, RATE_LIMIT_MESSAGE } from '@/app/lib/watchlist-ai'
+
 export const dynamic = 'force-dynamic'
 
 // GET /api/movies - Get all movies for a user (from both collections)
@@ -206,6 +208,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!isProviderConfigured()) {
+      return NextResponse.json({ error: 'Movie embeddings are not configured. Set GEMINI_API_KEY on the server.' }, { status: 503 })
+    }
+    const embeddingFields = await embedMovie({ title, genre, ...tmdb })
     const isWatched = watched === true
 
     if (isWatched) {
@@ -225,6 +231,7 @@ export async function POST(request: NextRequest) {
         watchedAt: new Date().toISOString(),
         userId,
         ...tmdb,
+        ...embeddingFields,
       })
 
       await movie.save()
@@ -280,6 +287,7 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
         userId,
         ...tmdb,
+        ...embeddingFields,
       }
 
       // 🔥 CRITICAL: Log what we're saving
@@ -341,6 +349,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ movie: movieData }, { status: 201 })
     }
   } catch (error) {
+    if (isProviderRateLimit(error)) {
+      return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429, headers: { 'Retry-After': '60' } })
+    }
     // Unique index backstop for concurrent duplicate adds
     if ((error as { code?: number })?.code === 11000) {
       return NextResponse.json(

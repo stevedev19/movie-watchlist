@@ -1,8 +1,9 @@
+import { embeddingSchemaFields, MovieEmbeddingFields } from './embeddingFields'
 import mongoose, { Schema, Model } from 'mongoose'
 import { Movie as MovieType } from '@/types/movie'
 import { tmdbSchemaFields, addTmdbUserIndex } from './tmdbFields'
 
-export interface MovieWatchedDocument extends Omit<MovieType, 'id'>, mongoose.Document {
+export interface MovieWatchedDocument extends Omit<MovieType, 'id'>, MovieEmbeddingFields, mongoose.Document {
   userId: string
   _id: mongoose.Types.ObjectId
 }
@@ -53,6 +54,7 @@ const MovieWatchedSchema = new Schema<MovieWatchedDocument>(
       required: true,
     },
     ...tmdbSchemaFields,
+    ...embeddingSchemaFields,
     userId: {
       type: String,
       required: true,

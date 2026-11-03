@@ -7,7 +7,10 @@ import { Movie as MovieType } from '@/types/movie'
 import mongoose from 'mongoose'
 import { getUserFromRequestCookie } from '@/lib/auth'
 import { logActivity } from '@/app/lib/activity-logger'
+import { EMBEDDING_MODEL, isEmbedding } from '@/lib/watchlist-embeddings'
 import { pickTmdbFields } from '@/app/models/tmdbFields'
+
+import { embedMovie, isProviderRateLimit, RATE_LIMIT_MESSAGE } from '@/app/lib/watchlist-ai'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,8 +134,8 @@ export async function PUT(
     const { title, year, genre, image, imageUrl, hasImage, imageType, notes, watched, rating, watchedAt } = body
 
     // Find which collection the movie is in
-    const movieInToWatch = await MovieToWatch.findById(params.id)
-    const movieInWatched = await MovieWatched.findById(params.id)
+    const movieInToWatch = await MovieToWatch.findById(params.id).select('+embedding +embeddingModel')
+    const movieInWatched = await MovieWatched.findById(params.id).select('+embedding +embeddingModel')
 
     if (!movieInToWatch && !movieInWatched) {
       console.error(`[PUT /api/movies/${params.id}] Movie not found in any collection. userId: ${userId}`)
@@ -161,6 +164,17 @@ export async function PUT(
       }
     }
 
+    const embeddingFields = title !== undefined && title !== existingMovie.title ||
+      genre !== undefined && genre !== existingMovie.genre ||
+      (watched === false && movieInWatched && (existingMovie.embeddingModel !== EMBEDDING_MODEL || !isEmbedding(existingMovie.embedding)))
+      ? await embedMovie({
+          title: title ?? existingMovie.title,
+          genre: genre ?? existingMovie.genre,
+          genres: existingMovie.genres,
+          overview: existingMovie.overview,
+        })
+      : { embedding: existingMovie.embedding, embeddingModel: existingMovie.embeddingModel }
+
     // If watched status is changing, move between collections
     if (watched !== undefined) {
       // Case 1: Mark as watched (move from to-watch to watched)
@@ -188,6 +202,7 @@ export async function PUT(
           watchedAt: watchedAt || new Date().toISOString(),
           userId,
           ...pickTmdbFields(movieInToWatch),
+          ...embeddingFields,
         }
 
         const newMovie = new MovieWatched(movieData)
@@ -246,6 +261,7 @@ export async function PUT(
           createdAt: movieInWatched.createdAt,
           userId,
           ...pickTmdbFields(movieInWatched),
+          ...embeddingFields,
         }
 
         const newMovie = new MovieToWatch(movieData)
@@ -285,7 +301,7 @@ export async function PUT(
     }
 
     // Update in place if not changing watched status or if watched status already matches
-    const updateData: Record<string, unknown> = {}
+    const updateData: Record<string, unknown> = { ...embeddingFields }
     if (title !== undefined) updateData.title = title
     if (year !== undefined) updateData.year = year
     if (genre !== undefined) updateData.genre = genre
@@ -370,6 +386,9 @@ export async function PUT(
 
     return NextResponse.json({ movie: movieData })
   } catch (error) {
+    if (isProviderRateLimit(error)) {
+      return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429, headers: { 'Retry-After': '60' } })
+    }
     console.error('Error updating movie:', error)
     return NextResponse.json(
       { error: 'Failed to update movie' },

@@ -16,6 +16,7 @@ import ShelfFilterBar, { ShelfSort } from '../components/shelf/ShelfFilterBar'
 import PosterTile from '../components/shelf/PosterTile'
 import UpNextCard from '../components/shelf/UpNextCard'
 import RateDialog from '../components/shelf/RateDialog'
+import AskWatchlist from '../components/shelf/AskWatchlist'
 import { fill, formatNumber } from '../components/shelf/shelfUtils'
 import { bodyFont, displayFont, editorialFont } from '../fonts'
 
@@ -388,6 +389,8 @@ function DashboardContent() {
               </h1>
               <p className="mt-1 text-sm text-[#f2ebdd]/55">{isLoading ? '\u00a0' : statsLine}</p>
             </section>
+
+            {isAuthenticated && <AskWatchlist key={currentUserId} soonMovies={movies.filter(movie => movie.userId === currentUserId && !movie.watched)} moviesLoading={isLoading} onAddMovie={() => setShowAddMovieModal(true)} onMarkSeen={setRatingMovie} />}
 
             <ShelfTabs tab={tab} onTabChange={setTab} seenCount={stats.watched} soonCount={stats.toWatch} />
 
